@@ -1,0 +1,1563 @@
+{
+  "ztnamultiplier": {
+    "slug": "ztnamultiplier",
+    "type": "domain",
+    "title": "Stack Multiplier for Zero Trust (ZTNA)",
+    "badge": "Stack Multiplier for Zero Trust (ZTNA)",
+    "desc": "Select a domain using the radio buttons, then attach capabilities. Set one capability as the anchor to define the baseline; totals and multiplier update in real time.",
+    "defaultPrice": 50,
+    "domains": {
+      "Identity": [
+        "Identity Governance",
+        "Central Authentication",
+        "Adaptive Authentication",
+        "Continuous Authentication",
+        "Privileged Identity Mgmt",
+        "Privileged Session Monitoring",
+        "Secrets Management"
+      ],
+      "Zero Trust Access": [
+        "Zero Trust Network Access",
+        "SASE Fabric",
+        "Least Privilege Enforcement",
+        "Continuous Access Evaluation",
+        "Session Termination",
+        "Privileged Access Termination"
+      ],
+      "Endpoint Trust": [
+        "Endpoint Trust Signal",
+        "Device Posture Assessment",
+        "EDR"
+      ],
+      "Network / Web": [
+        "Secure Web Gateway",
+        "Firewall-as-a-Service",
+        "Insider Threat Prevention"
+      ],
+      "Cloud & SaaS": [
+        "Cloud / SaaS DLP",
+        "CASB \u2013 Discover",
+        "CASB \u2013 Access Control",
+        "CASB \u2013 Threat Protection",
+        "SSPM"
+      ],
+      "Data Security": [
+        "Data Classification",
+        "Endpoint DLP",
+        "Network / Web DLP"
+      ],
+      "Governance": [
+        "Audit Trails & Evidence",
+        "Zero Trust Governance"
+      ]
+    },
+    "tips": {
+      "noAnchor": "Set an anchor first (baseline capability).",
+      "high": "Strong stack. Next: harden identity, automate response, and prove compliance evidence.",
+      "mid": "Healthy expansion path. Attach across multiple domains for measurable outcomes.",
+      "low": "To increase multiplier, attach across at least 3 domains with measurable outcomes."
+    }
+  },
+  "SoCmultiplier": {
+    "slug": "SoCmultiplier",
+    "type": "grid",
+    "title": "Stack Multiplier for SOC",
+    "badge": "SOC Stack Multiplier",
+    "desc": "Select your anchor (Central SIEM Platform) to define the baseline; add-ons and multiplier update in real time.",
+    "anchor": "Central SIEM Platform",
+    "capabilities": [
+      {
+        "name": "Central SIEM Platform",
+        "price": 250,
+        "desc": "",
+        "isAnchor": true
+      },
+      {
+        "name": "Detection Engineering",
+        "price": 65,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "MITRE ATT&CK Alignment",
+        "price": 40,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "UEBA",
+        "price": 85,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Identity Threat Detection",
+        "price": 80,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Threat Intelligence Platform",
+        "price": 90,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "External Threat Feeds",
+        "price": 35,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Dark Web Monitoring",
+        "price": 60,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Brand Monitoring",
+        "price": 55,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Threat Hunting",
+        "price": 95,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "SOAR Platform",
+        "price": 110,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Incident Case Management",
+        "price": 50,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Playbook Management",
+        "price": 45,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Incident Orchestration",
+        "price": 85,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Breach & Attack Simulation",
+        "price": 70,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Continuous Control Validation",
+        "price": 75,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Deception Technology",
+        "price": 65,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Network Packet Capture (PCAP)",
+        "price": 120,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Network Packet Broker",
+        "price": 95,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Network Behaviour Analytics",
+        "price": 105,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Malware Analysis",
+        "price": 90,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Digital Forensics",
+        "price": 110,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "DFIR Services",
+        "price": 140,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Threat Attribution",
+        "price": 55,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "SOC Dashboards",
+        "price": 35,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Compliance Evidence Management",
+        "price": 60,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "CERT-In Reporting",
+        "price": 25,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "XDR Platform",
+        "price": 180,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Attack Surface Management",
+        "price": 90,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "PAM for SOC Analysts",
+        "price": 45,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "NAC",
+        "price": 55,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "GRC",
+        "price": 75,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Network Performance Monitoring / Policy Manager (NPM)",
+        "price": 65,
+        "desc": "",
+        "isAnchor": false
+      }
+    ],
+    "tips": {
+      "noAnchor": "Select your anchor (Central SIEM Platform) first.",
+      "high": "Strong SOC stack. Next: align detections to ATT&CK and operationalize response playbooks.",
+      "mid": "Healthy expansion path. Attach 1\u20132 capabilities per quarter using audit + incident triggers.",
+      "low": "To increase multiplier, attach across detection, response, and visibility layers."
+    }
+  },
+  "bfsimultiplier": {
+    "slug": "bfsimultiplier",
+    "type": "domain",
+    "title": "Stack Multiplier for BFSI",
+    "badge": "BFSI Stack Multiplier",
+    "desc": "Select a BFSI domain using the radio buttons, then attach capabilities. Set one capability as the anchor to define the baseline; totals and multiplier update in real time.",
+    "defaultPrice": 50,
+    "domains": {
+      "Governance": [
+        "Security Governance & Policy",
+        "Control Framework Mapping",
+        "Risk Assessment (Enterprise)",
+        "Cyber Risk Quantification",
+        "Compliance Evidence Management",
+        "Regulatory Reporting (Process)",
+        "Third-Party Risk Management",
+        "Security Awareness Program",
+        "Privacy Governance (DPDP)",
+        "DPDP Governance",
+        "Secure Change Governance",
+        "Asset Criticality & Crown Jewels",
+        "Incident Response Governance",
+        "Tabletop / Simulation Drills"
+      ],
+      "Identity": [
+        "Identity Governance (IGA)",
+        "SSO / Federation",
+        "Adaptive MFA",
+        "Passwordless (FIDO2)",
+        "CIAM",
+        "Consent & Preference Management",
+        "Privileged Access Management",
+        "Privileged Session Management",
+        "Secrets Management",
+        "Endpoint Privilege Management",
+        "ITDR",
+        "NAC",
+        "ZTNA",
+        "SASE",
+        "CASB",
+        "SSPM",
+        "Remote Browser Isolation",
+        "Secure Web Access"
+      ],
+      "Endpoint": [
+        "EDR",
+        "Threat Containment & Rollback",
+        "Endpoint Vulnerability Visibility",
+        "Endpoint Patch Compliance",
+        "Endpoint Platform Hardening",
+        "Device Control",
+        "Endpoint DLP"
+      ],
+      "Email Security": [
+        "Email Security",
+        "BEC / Impersonation Defense",
+        "User Awareness & Training"
+      ],
+      "Network": [
+        "NGFW",
+        "IPS / Threat Prevention",
+        "Network Segmentation / Policy",
+        "Secure Web Gateway",
+        "DDoS Protection",
+        "NDR",
+        "NBAD",
+        "PCAP / Taps",
+        "Network Packet Broker"
+      ],
+      "Application Security": [
+        "SAST",
+        "SCA",
+        "DAST",
+        "RASP",
+        "SBOM",
+        "CI/CD Security Gates",
+        "Secrets Detection in Code",
+        "WAF",
+        "API Runtime Security",
+        "Vulnerability Disclosure Program"
+      ],
+      "Cloud Security": [
+        "CWPP",
+        "CSPM",
+        "CIEM",
+        "CASB",
+        "SSPM",
+        "Cloud DLP",
+        "DSPM",
+        "Container Image Scanner",
+        "Container Runtime Security",
+        "Cloud Key Management",
+        "Cloud KMS / HSM Governance"
+      ],
+      "Data Security": [
+        "Data Discovery & Classification",
+        "DLP (Network / Cloud / Endpoint)",
+        "Encryption & Key Management",
+        "HSM",
+        "Tokenization",
+        "Digital Rights Management",
+        "Database Activity Monitoring",
+        "Data Retention & Disposal Ops"
+      ],
+      "SOC": [
+        "SIEM",
+        "UEBA",
+        "SOAR",
+        "Threat Intelligence Platform",
+        "External Attack Surface Mgmt",
+        "Dark Web Monitoring",
+        "Breach & Attack Simulation",
+        "Deception",
+        "Threat Hunting"
+      ],
+      "AI Security": [
+        "LLM API Protection",
+        "Prompt Injection Protection",
+        "Prompt / Response Security"
+      ]
+    },
+    "tips": {
+      "noAnchor": "Set an anchor first (baseline capability).",
+      "high": "Strong BFSI stack. Next: harden identity, automate response, and prove compliance evidence.",
+      "mid": "Healthy expansion path. Attach across identity, endpoint, appsec, data, and governance.",
+      "low": "To increase multiplier, attach across at least 3 domains with measurable outcomes."
+    }
+  },
+  "digitalnativesmultiplier": {
+    "slug": "digitalnativesmultiplier",
+    "type": "domain",
+    "title": "Stack Multiplier for Digital Natives",
+    "badge": "Digital Natives Stack Multiplier",
+    "desc": "",
+    "defaultPrice": 50,
+    "domains": {
+      "Governance": [
+        "Cybersecurity Governance",
+        "Secure Engineering Policy",
+        "Third-Party Risk",
+        "Security Awareness"
+      ],
+      "Identity": [
+        "CIAM",
+        "Risk-Based Authentication",
+        "Workforce IAM",
+        "Privileged Access Management",
+        "Phishing-Resistant MFA",
+        "Identity Threat Detection"
+      ],
+      "Application": [
+        "Secure SDLC",
+        "SAST / DAST",
+        "API Security",
+        "Web Application Firewall",
+        "Mobile App Security",
+        "SBOM"
+      ],
+      "Cloud": [
+        "Cloud Security Posture Mgmt",
+        "Workload Protection",
+        "Container Security",
+        "Secrets Management",
+        "SASE",
+        "CASB"
+      ],
+      "Data": [
+        "Data Classification",
+        "Data Loss Prevention",
+        "Encryption & Key Management",
+        "Database Security"
+      ],
+      "Endpoint": [
+        "Endpoint Detection & Response",
+        "Browser Isolation",
+        "Device Control"
+      ],
+      "AI Security": [
+        "Prompt Injection Protection",
+        "LLM Data Leakage Control",
+        "AI API Abuse Detection"
+      ],
+      "SOC": [
+        "SIEM",
+        "UEBA",
+        "SOAR",
+        "External Attack Surface Mgmt"
+      ],
+      "Resilience": [
+        "Immutable Backups",
+        "Recovery Drills"
+      ]
+    },
+    "tips": {
+      "noAnchor": "Set an anchor first (baseline capability).",
+      "high": "Strong stack. Next: harden identity, automate response, and prove compliance evidence.",
+      "mid": "Healthy expansion path. Attach across multiple domains for measurable outcomes.",
+      "low": "To increase multiplier, attach across at least 3 domains with measurable outcomes."
+    }
+  },
+  "energymultiplier": {
+    "slug": "energymultiplier",
+    "type": "grid",
+    "title": "Stack Multiplier for Energy & Power",
+    "badge": "Energy & Power Stack Multiplier",
+    "desc": "Select your anchor (OT Asset Discovery) to define the baseline; add-ons and multiplier update in real time.",
+    "anchor": "OT Asset Discovery",
+    "capabilities": [
+      {
+        "name": "OT Asset Discovery",
+        "price": 140,
+        "desc": "",
+        "isAnchor": true
+      },
+      {
+        "name": "IT-OT Asset Inventory",
+        "price": 65,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "OT Network Segmentation",
+        "price": 110,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Purdue Model Alignment",
+        "price": 35,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Industrial Firewalling",
+        "price": 95,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Data Diode (Unidirectional Gateway)",
+        "price": 120,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Secure Remote Access",
+        "price": 55,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Identity & Access Control (OT)",
+        "price": 80,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Privileged Access Mgmt",
+        "price": 75,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Configuration & Change Mgmt (OT)",
+        "price": 45,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "OT Network Monitoring",
+        "price": 60,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Process Anomaly Detection",
+        "price": 70,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Protection System Security",
+        "price": 55,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Malware Detection (OT-Safe)",
+        "price": 85,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Vulnerability Visibility (OT)",
+        "price": 60,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Patch Risk Assessment",
+        "price": 50,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Incident Detection (OT)",
+        "price": 55,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Incident Response Playbooks",
+        "price": 40,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Forensics Readiness",
+        "price": 65,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Ransomware & Grid Resilience",
+        "price": 95,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Backup & Recovery (OT)",
+        "price": 75,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Energy Data Protection",
+        "price": 70,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Supplier & EPC Risk",
+        "price": 55,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "OT Threat Intelligence",
+        "price": 45,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "SOC Integration",
+        "price": 35,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Compliance Evidence Mgmt",
+        "price": 40,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Regulatory Reporting",
+        "price": 25,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Grid Security Testing",
+        "price": 35,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "OT Security Governance",
+        "price": 45,
+        "desc": "",
+        "isAnchor": false
+      }
+    ],
+    "tips": {
+      "noAnchor": "Select your anchor (OT Asset Discovery) first.",
+      "high": "Strong OT stack. Next: validate segmentation, harden remote access, and test recovery.",
+      "mid": "Healthy expansion path. Attach segmentation, monitoring, and incident response playbooks.",
+      "low": "To increase multiplier, attach across visibility, protection, and resilience layers."
+    }
+  },
+  "enterprisemultiplier": {
+    "slug": "enterprisemultiplier",
+    "type": "domain",
+    "title": "Stack Multiplier for Enterprise",
+    "badge": "Enterprise Stack Multiplier",
+    "desc": "",
+    "defaultPrice": 50,
+    "domains": {
+      "AppSec": [
+        "SAST",
+        "SCA",
+        "DAST",
+        "RASP",
+        "API Security - Design/Test",
+        "API Runtime Protection",
+        "Bot Management",
+        "DDoS Protection",
+        "CASB"
+      ],
+      "AI Security": [
+        "AI/LLM Model Inventory",
+        "LLM API Abuse Detection",
+        "Prompt & Response Security",
+        "Model/API Abuse Detection"
+      ],
+      "Container": [
+        "Image Scanning",
+        "Kubernetes Hardening",
+        "Runtime Container Protection",
+        "K8s Admission Control",
+        "Secrets Protection"
+      ],
+      "Cloud Security": [
+        "CSPM",
+        "CWPP",
+        "CIEM",
+        "CASB",
+        "Cloud WAF/API/Gateway Security",
+        "Cloud Network Security",
+        "Cloud Key Management",
+        "Cloud Logging & Threat Detect",
+        "DSPM"
+      ],
+      "Network": [
+        "NGFW",
+        "IPS",
+        "Secure DNS",
+        "NDR",
+        "NBAD",
+        "PCAP",
+        "NAC"
+      ],
+      "Identity": [
+        "IGA",
+        "SSO/Federation",
+        "Adaptive MFA",
+        "Passwordless / FIDO2",
+        "Privileged Session Mgmt",
+        "Secrets Management",
+        "ITDR"
+      ],
+      "Zero Trust": [
+        "ZTNA",
+        "SASE",
+        "SWG",
+        "CASB (enforcement)",
+        "EPM"
+      ],
+      "Endpoint": [
+        "EDR",
+        "EPP",
+        "Device Control",
+        "Endpoint DLP",
+        "Browser Isolation",
+        "MDM / Mobile Security"
+      ],
+      "Email": [
+        "Email Security Gateway",
+        "BEC Protection"
+      ],
+      "Data Security": [
+        "Data Classification",
+        "Network DLP",
+        "Cloud/SaaS DLP",
+        "Cloud DLP",
+        "Encryption / Key Mgmt",
+        "HSM",
+        "Digital Rights Mgmt",
+        "Database Activity Monitoring",
+        "Tokenization"
+      ],
+      "Exposure Mgmt": [
+        "EASM",
+        "Attack Surface Monitoring",
+        "Dark Web Monitoring",
+        "Threat Intel Feeds"
+      ],
+      "SOC Ops": [
+        "SIEM",
+        "UEBA",
+        "SOAR",
+        "Case Mgmt",
+        "Threat Hunting",
+        "BAS"
+      ],
+      "DFIR": [
+        "Deception",
+        "Forensics Tooling",
+        "DFIR Services",
+        "Backup & Recovery"
+      ],
+      "Governance": [
+        "GRC",
+        "Compliance Evidence Mgmt",
+        "Regulatory Reporting (CERT-In etc.)"
+      ],
+      "IT Operations Security": [
+        "IT Asset Management (ITAM)",
+        "Patch Management (ITAM)",
+        "IT Service Management (ITSM)",
+        "Configuration Management (CMDB)"
+      ],
+      "Observability": [
+        "Application Performance Monitoring",
+        "Infrastructure Monitoring",
+        "Log Analytics / Ops + Sec",
+        "Event Correlation",
+        "Business Service Monitoring"
+      ]
+    },
+    "tips": {
+      "noAnchor": "Set an anchor first (baseline capability).",
+      "high": "Strong stack. Next: harden identity, automate response, and prove compliance evidence.",
+      "mid": "Healthy expansion path. Attach across multiple domains for measurable outcomes.",
+      "low": "To increase multiplier, attach across at least 3 domains with measurable outcomes."
+    }
+  },
+  "fintechmultiplier": {
+    "slug": "fintechmultiplier",
+    "type": "domain",
+    "title": "Stack Multiplier for Fintech",
+    "badge": "Fintech Stack Multiplier",
+    "desc": "Select a Fintech domain using the radio buttons, then attach capabilities. Set one capability as the anchor to define the baseline; totals and multiplier update in real time.",
+    "defaultPrice": 50,
+    "domains": {
+      "Governance": [
+        "Cybersecurity Governance",
+        "PCI Governance",
+        "Risk Assessment",
+        "Third-Party Risk",
+        "Security Awareness"
+      ],
+      "Identity": [
+        "CIAM",
+        "Risk-Based Authentication",
+        "Workforce IAM",
+        "Privileged Access Management",
+        "Phishing-Resistant MFA",
+        "Identity Threat Detection"
+      ],
+      "Application": [
+        "Secure SDLC",
+        "SAST / DAST",
+        "API Security",
+        "Web Application Firewall",
+        "Mobile App Security",
+        "SBOM"
+      ],
+      "Cloud": [
+        "CSPM",
+        "CWPP",
+        "Container Security",
+        "Secrets Management",
+        "SASE",
+        "CASB"
+      ],
+      "Data": [
+        "Data Classification",
+        "Data Loss Prevention",
+        "Encryption & HSM",
+        "Database Security",
+        "Digital Rights Management"
+      ],
+      "Endpoint": [
+        "Endpoint Detection & Response",
+        "Browser Isolation",
+        "Device Control"
+      ],
+      "AI Security": [
+        "Prompt Injection Protection",
+        "LLM Data Leakage Control",
+        "AI API Abuse Detection"
+      ],
+      "Fraud": [
+        "Behavioural Analytics"
+      ],
+      "SOC": [
+        "SIEM",
+        "SOAR",
+        "External ASM"
+      ],
+      "Resilience": [
+        "Immutable Backups",
+        "Recovery Drills"
+      ]
+    },
+    "tips": {
+      "noAnchor": "Set an anchor first (baseline capability).",
+      "high": "Strong fintech stack. Next: reduce fraud, harden identity, and prove PCI controls with evidence.",
+      "mid": "Healthy expansion path. Attach CIAM, API security, data controls, and SOC automation.",
+      "low": "To increase multiplier, attach across governance, identity, cloud, data, and fraud."
+    }
+  },
+  "idammultiplier": {
+    "slug": "idammultiplier",
+    "type": "grid",
+    "title": "Stack Multiplier for IDAM",
+    "badge": "IDAM Stack Multiplier",
+    "desc": "Select your anchor (Central Identity Repository) to define the baseline; add-ons and multiplier update in real time.",
+    "anchor": "Central Identity Repository",
+    "capabilities": [
+      {
+        "name": "Central Identity Repository",
+        "price": 120,
+        "desc": "",
+        "isAnchor": true
+      },
+      {
+        "name": "Identity Uniqueness",
+        "price": 45,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Identity Lifecycle (JML)",
+        "price": 70,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Strong Authentication",
+        "price": 65,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Multi-Factor Authentication",
+        "price": 55,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Adaptive / Risk Auth",
+        "price": 60,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Password Policy",
+        "price": 20,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "RBAC",
+        "price": 35,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Least Privilege",
+        "price": 45,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Segregation of Duties",
+        "price": 30,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Privileged Account Discovery",
+        "price": 40,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Privileged Access Control",
+        "price": 70,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Privileged Session Monitoring",
+        "price": 65,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Credential Rotation",
+        "price": 35,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Dormant Accounts",
+        "price": 25,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Access Reviews",
+        "price": 35,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Third-Party Access",
+        "price": 50,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Service / Machine IDs",
+        "price": 45,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Auth Event Logging",
+        "price": 20,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Privileged Activity Logging",
+        "price": 30,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Log Retention",
+        "price": 18,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Identity Threat Detection",
+        "price": 75,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Incident Access Revocation",
+        "price": 25,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Data Access Governance",
+        "price": 60,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Audit Evidence",
+        "price": 22,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "IAM Governance",
+        "price": 55,
+        "desc": "",
+        "isAnchor": false
+      }
+    ],
+    "tips": {
+      "noAnchor": "Select your anchor (Central Identity Repository) first.",
+      "high": "Strong IDAM stack. Next: operationalize privileged controls + governance + reviews.",
+      "mid": "Healthy expansion path. Attach lifecycle (JML), MFA, and access reviews early.",
+      "low": "To increase multiplier, attach across auth, privileged controls, and governance."
+    }
+  },
+  "insurancemultiplier": {
+    "slug": "insurancemultiplier",
+    "type": "grid",
+    "title": "Stack Multiplier for Insurance",
+    "badge": "Insurance Stack Multiplier",
+    "desc": "Select your anchor (IT Asset Discovery) to define the baseline; add-ons and multiplier update in real time.",
+    "anchor": "IT Asset Discovery",
+    "capabilities": [
+      {
+        "name": "IT Asset Discovery",
+        "price": 90,
+        "desc": "",
+        "isAnchor": true
+      },
+      {
+        "name": "IT Asset Inventory / CMDB",
+        "price": 55,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Vulnerability Management",
+        "price": 60,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Patch Management",
+        "price": 45,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Identity Governance (IGA)",
+        "price": 95,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Authentication & SSO",
+        "price": 70,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Adaptive MFA",
+        "price": 55,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "CIAM",
+        "price": 60,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Privileged Access Management",
+        "price": 85,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "ITDR",
+        "price": 75,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Endpoint Protection (EPP/EDR)",
+        "price": 90,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Endpoint Hardening",
+        "price": 45,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Email Security",
+        "price": 35,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "BEC Protection",
+        "price": 50,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Secure Web Gateway",
+        "price": 40,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Remote Browser Isolation",
+        "price": 55,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Network Segmentation",
+        "price": 70,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Data Diode (Unidirectional)",
+        "price": 120,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Firewall / IPS",
+        "price": 75,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Web Application Firewall",
+        "price": 65,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "API Security",
+        "price": 55,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Data Loss Prevention",
+        "price": 70,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Data Classification",
+        "price": 40,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Encryption & Key Management",
+        "price": 60,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Database Security (Beyond DAM)",
+        "price": 85,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "SIEM",
+        "price": 160,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "UEBA",
+        "price": 85,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "SOAR",
+        "price": 110,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Threat Intelligence",
+        "price": 90,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "External Attack Surface Mgmt",
+        "price": 90,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Dark Web Monitoring",
+        "price": 60,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Brand Monitoring",
+        "price": 55,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Incident Response Playbooks",
+        "price": 45,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Forensics Readiness",
+        "price": 65,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Ransomware Hardening",
+        "price": 55,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Backup & Disaster Recovery",
+        "price": 75,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Data Retention & Disposal (DPDP)",
+        "price": 45,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Third-Party / Vendor Risk",
+        "price": 50,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "GRC & Compliance Evidence",
+        "price": 40,
+        "desc": "",
+        "isAnchor": false
+      }
+    ],
+    "tips": {
+      "noAnchor": "Select your anchor (IT Asset Discovery) first.",
+      "high": "Strong insurance stack. Next: lock identity, automate response, and prove governance.",
+      "mid": "Healthy expansion path. Attach IGA/SSO, EDR, SIEM, and third-party risk.",
+      "low": "To increase multiplier, attach across identity, protection, detection, and governance."
+    }
+  },
+  "manufacturingmultiplier": {
+    "slug": "manufacturingmultiplier",
+    "type": "grid",
+    "title": "Stack Multiplier for Manufacturing",
+    "badge": "Manufacturing Stack Multiplier",
+    "desc": "Select your anchor (OT Asset Discovery) to define the baseline; add-ons and multiplier update in real time.",
+    "anchor": "OT Asset Discovery",
+    "capabilities": [
+      {
+        "name": "OT Asset Discovery",
+        "price": 140,
+        "desc": "",
+        "isAnchor": true
+      },
+      {
+        "name": "IT-OT Asset Inventory",
+        "price": 65,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "OT Network Segmentation",
+        "price": 110,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Purdue Model Alignment",
+        "price": 35,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Industrial Firewalling",
+        "price": 95,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Data Diode (Unidirectional Gateway)",
+        "price": 120,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Secure Remote Access",
+        "price": 55,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Identity & Access Control (OT)",
+        "price": 80,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Privileged Access Mgmt",
+        "price": 75,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Change Management (OT)",
+        "price": 45,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "OT Network Monitoring",
+        "price": 60,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Anomaly Detection",
+        "price": 70,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Safety System Protection",
+        "price": 55,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Malware Detection (OT-Safe)",
+        "price": 85,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Vulnerability Visibility (OT)",
+        "price": 60,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Patch Risk Assessment",
+        "price": 50,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Incident Detection (OT)",
+        "price": 55,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Incident Response Playbooks",
+        "price": 40,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Forensics Readiness",
+        "price": 65,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Ransomware Resilience",
+        "price": 90,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Backup & Recovery (OT)",
+        "price": 75,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Data Protection (Manufacturing Data)",
+        "price": 60,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Supplier & Vendor Risk",
+        "price": 55,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "OT Threat Intelligence",
+        "price": 45,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "SOC Integration",
+        "price": 35,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Compliance Evidence Mgmt",
+        "price": 40,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "Regulatory Reporting",
+        "price": 25,
+        "desc": "",
+        "isAnchor": false
+      },
+      {
+        "name": "OT Security Governance",
+        "price": 45,
+        "desc": "",
+        "isAnchor": false
+      }
+    ],
+    "tips": {
+      "noAnchor": "Select your anchor (OT Asset Discovery) first.",
+      "high": "Strong OT stack. Next: validate segmentation, harden remote access, and test recovery.",
+      "mid": "Healthy expansion path. Attach segmentation, monitoring, and incident response playbooks.",
+      "low": "To increase multiplier, attach across visibility, protection, and resilience layers."
+    }
+  },
+  "pharmamultiplier": {
+    "slug": "pharmamultiplier",
+    "type": "domain",
+    "title": "Stack Multiplier for Pharma",
+    "badge": "Pharma Stack Multiplier",
+    "desc": "",
+    "defaultPrice": 50,
+    "domains": {
+      "Governance": [
+        "Cybersecurity Governance",
+        "GxP IT Controls (CSV / Annex 11)",
+        "Data Integrity (ALCOA+)",
+        "Third-Party Risk Management",
+        "Incident Response Governance",
+        "Backup & Recovery Governance (GxP)"
+      ],
+      "Identity": [
+        "Identity Governance (IGA)",
+        "Workforce IAM / SSO",
+        "Privileged Access Management",
+        "MFA / Strong Authentication",
+        "Vendor Remote Access",
+        "Identity Threat Detection"
+      ],
+      "Endpoint": [
+        "Endpoint Protection (EPP/EDR)",
+        "Lab System Hardening",
+        "Patch Management (Validated)",
+        "Device Control",
+        "Email Security & BEC"
+      ],
+      "Network": [
+        "Network Segmentation"
+      ],
+      "OT": [
+        "Purdue Model Alignment",
+        "Industrial Firewalling",
+        "OT Network Monitoring",
+        "Secure Remote Engineering Access",
+        "PLC Logic Change Detection",
+        "Data Diode"
+      ],
+      "Application": [
+        "Secure SDLC",
+        "SAST / DAST",
+        "API Security",
+        "Web Application Firewall",
+        "SBOM"
+      ],
+      "Data": [
+        "Data Classification",
+        "Data Loss Prevention",
+        "Encryption & Key Management",
+        "Database Security",
+        "Operational Data Retention",
+        "Defensible Deletion / Legal Hold",
+        "Digital Rights Management"
+      ],
+      "SOC": [
+        "SIEM",
+        "UEBA",
+        "SOAR",
+        "Backup Security Monitoring",
+        "Digital Forensics"
+      ],
+      "Resilience": [
+        "Immutable Backups",
+        "Ransomware Recovery",
+        "Recovery Drills & Validation",
+        "Backup to SOC Integration"
+      ]
+    },
+    "tips": {
+      "noAnchor": "Set an anchor first (baseline capability).",
+      "high": "Strong stack. Next: harden identity, automate response, and prove compliance evidence.",
+      "mid": "Healthy expansion path. Attach across multiple domains for measurable outcomes.",
+      "low": "To increase multiplier, attach across at least 3 domains with measurable outcomes."
+    }
+  }
+}

@@ -1,0 +1,1309 @@
+{
+  "CyberArkPAM": {
+    "slug": "CyberArkPAM",
+    "title": "Transitioning from Any PAM Solution to CyberArk",
+    "subtitle": "Enterprise Technical Migration Plan & Execution Framework",
+    "badge": "PAM Migration Accelerator",
+    "flow": [
+      {
+        "step": 1,
+        "role": "Executive Sponsors",
+        "details": "CIO, CISO",
+        "description": "Strategic alignment, budgetary authority, and executive project governance."
+      },
+      {
+        "step": 2,
+        "role": "Technical Project Manager",
+        "details": "PMO & Governance",
+        "description": "Directs cross-functional milestones, sprint schedules, and status reporting."
+      },
+      {
+        "step": 3,
+        "role": "CyberArk Implementation Team",
+        "details": "Certified Engineers",
+        "description": "Vault architecture, Component deployment, Safe migration, and API integrations."
+      },
+      {
+        "step": 4,
+        "role": "Infrastructure Team",
+        "details": "Systems & Network",
+        "description": "Host provisioning, network firewall rules, OS hardening, and load balancer setup."
+      },
+      {
+        "step": 5,
+        "role": "Security Team",
+        "details": "SecOps & Compliance",
+        "description": "Access policy approvals, compliance verification, and SIEM auditing."
+      },
+      {
+        "step": 6,
+        "role": "Application Teams",
+        "details": "Service Owners",
+        "description": "Target credential rotation, application safe validation, and test sign-offs."
+      }
+    ],
+    "sections": [
+      {
+        "title": "Introduction",
+        "intro": "This document provides a detailed technical migration plan for transitioning from your existing Privileged Access Management (PAM) solution to CyberArk. The plan includes in-depth technical steps, configurations, diagrams, tables, and best practices to ensure a successful migration with minimal disruption while enhancing your organization's security posture.",
+        "hasDiagram": false,
+        "subsections": [],
+        "tables": []
+      },
+      {
+        "title": "Table of Contents",
+        "intro": "Introduction \n                 Phase 1: Project Initiation and Planning \n                 Phase 2: Assessment of Current PAM Environment \n                 Phase 3: Design of CyberArk Solution Architecture \n                 Phase 4: Implementation Planning \n                 Phase 5: Environment Preparation \n                 Phase 6: Data Migration Planning \n                 Phase 7: Configuration of Policies and Workflows \n                 Phase 8: Integration with Other Systems \n                ",
+        "hasDiagram": false,
+        "subsections": [],
+        "tables": []
+      },
+      {
+        "title": "Phase 1: Project Initiation and Planning",
+        "intro": "",
+        "hasDiagram": true,
+        "subsections": [
+          {
+            "title": "1.1 Stakeholder Identification",
+            "content": "Objective: Identify all technical stakeholders involved in the migration. Stakeholder Diagram: +--------------------+ | Executive Sponsors| | (CIO, CISO) | +----------+---------+ | v +----------+---------+ | Technical Project | | Manager | +----------+---------+ | v +-------------------+ | CyberArk | | Implementation | | Team | +----------+--------+ | v +-------------------+ | Infrastructure | | Team | +----------+--------+ | v +-------------------+ | Security | | Team | +----------+--------+ | v +-------------------+ | Application Teams | +-------------------+ Action Items: Create a detailed contact list with roles, responsibilities, and escalation paths. Establish regular technical meetings and communication channels (e.g., Slack, Microsoft Teams)."
+          },
+          {
+            "title": "1.2 Project Team Formation",
+            "content": "Roles and Responsibilities Table: Role Responsibilities Lead CyberArk Engineer Technical lead, oversees installation and configuration CyberArk Support Engineers Assist with setup, troubleshoot issues Network Engineers Configure network settings, firewalls, routing Server Administrators Provision servers, manage OS configurations Security Architects Ensure compliance with security policies Application Owners Provide application-specific requirements"
+          }
+        ],
+        "tables": [
+          [
+            [
+              "Role",
+              "Responsibilities"
+            ],
+            [
+              "Lead CyberArk Engineer",
+              "Technical lead, oversees installation and configuration"
+            ],
+            [
+              "CyberArk Support Engineers",
+              "Assist with setup, troubleshoot issues"
+            ],
+            [
+              "Network Engineers",
+              "Configure network settings, firewalls, routing"
+            ],
+            [
+              "Server Administrators",
+              "Provision servers, manage OS configurations"
+            ],
+            [
+              "Security Architects",
+              "Ensure compliance with security policies"
+            ],
+            [
+              "Application Owners",
+              "Provide application-specific requirements"
+            ]
+          ]
+        ]
+      },
+      {
+        "title": "Phase 2: Assessment of Current PAM Environment",
+        "intro": "",
+        "hasDiagram": false,
+        "subsections": [
+          {
+            "title": "2.1 Inventory of Current PAM Assets",
+            "content": "Objective: Identify all systems, applications, and privileged accounts currently managed by the existing PAM solution. Identify privileged accounts across all systems. Review existing policies and workflows in the current PAM solution. Determine the current version and any custom configurations in use."
+          },
+          {
+            "title": "2.2 Identify Gaps and Issues",
+            "content": "Objective: Identify and document any limitations, gaps, or issues in the current PAM solution that CyberArk will address. Review existing audit logs and incident reports for PAM-related issues. Interview stakeholders to identify pain points and unmet requirements. Document findings and potential improvements with CyberArk."
+          }
+        ],
+        "tables": []
+      },
+      {
+        "title": "Phase 3: Design of CyberArk Solution Architecture",
+        "intro": "",
+        "hasDiagram": false,
+        "subsections": [
+          {
+            "title": "3.1 Architecture Design",
+            "content": "Objective: Develop a CyberArk solution architecture that aligns with business requirements and technical constraints. Design the CyberArk infrastructure (Vault, PVWA, PSM, CPM) based on best practices. Define network architecture requirements (firewalls, ports, and access controls). Prepare a high-level architecture diagram."
+          },
+          {
+            "title": "3.2 Integration Requirements",
+            "content": "Objective: Identify systems that will be integrated with CyberArk (e.g., Active Directory, SIEM, ITSM tools). Define integration points for CyberArk with existing infrastructure. Identify authentication mechanisms (LDAP, RADIUS, etc.). Prepare a requirements document for each integration point."
+          }
+        ],
+        "tables": []
+      },
+      {
+        "title": "Phase 4: Implementation Planning",
+        "intro": "",
+        "hasDiagram": false,
+        "subsections": [
+          {
+            "title": "4.1 Timeline and Milestones",
+            "content": "Objective: Create a detailed project plan with timelines, milestones, and deliverables. Define key milestones (e.g., installation, configuration, testing). Establish a project timeline, including dependencies and critical path tasks. Document any project risks and mitigation strategies."
+          },
+          {
+            "title": "4.2 Resource Allocation",
+            "content": "Objective: Allocate resources (hardware, software, personnel) for each phase of the project. Identify hardware and software requirements for the CyberArk environment. Assign team members to tasks based on expertise and availability."
+          }
+        ],
+        "tables": []
+      },
+      {
+        "title": "Phase 5: Environment Preparation",
+        "intro": "",
+        "hasDiagram": false,
+        "subsections": [
+          {
+            "title": "5.1 Infrastructure Setup",
+            "content": "Objective: Set up the infrastructure required to support CyberArk components. Provision servers for CyberArk Vault, PVWA, PSM, and CPM. Set up required network configurations (e.g., firewall rules, IP whitelisting). Install and configure required OS settings on each server."
+          },
+          {
+            "title": "5.2 Security Hardening",
+            "content": "Objective: Implement security best practices to protect the CyberArk environment. Enable multi-factor authentication for all CyberArk components. Apply encryption standards to all data at rest and in transit. Follow CyberArk\u2019s security hardening guidelines."
+          }
+        ],
+        "tables": []
+      },
+      {
+        "title": "Phase 6: Data Migration Planning",
+        "intro": "",
+        "hasDiagram": false,
+        "subsections": [
+          {
+            "title": "6.1 Data Export from Current PAM",
+            "content": "Objective: Export data from the current PAM solution to prepare for migration. Export privileged accounts, policies, and workflows from the current PAM system. Ensure data is cleaned and formatted for import into CyberArk."
+          },
+          {
+            "title": "6.2 CyberArk Import Preparation",
+            "content": "Objective: Prepare CyberArk for importing data. Set up staging environments to test data imports. Ensure data mapping aligns with CyberArk\u2019s schema requirements."
+          }
+        ],
+        "tables": []
+      },
+      {
+        "title": "Phase 7: Configuration of Policies and Workflows",
+        "intro": "",
+        "hasDiagram": false,
+        "subsections": [
+          {
+            "title": "7.1 Define Access Policies",
+            "content": "Objective: Configure access policies in CyberArk to enforce security controls. Set up role-based access controls (RBAC) for CyberArk users. Define policies for password rotation, access approvals, and session monitoring."
+          },
+          {
+            "title": "7.2 Workflow Configuration",
+            "content": "Objective: Configure workflows for access requests, approvals, and auditing. Set up workflows that align with your organization\u2019s operational processes. Configure automated logging and alerting for security events."
+          }
+        ],
+        "tables": []
+      },
+      {
+        "title": "Phase 8: Integration with Other Systems",
+        "intro": "",
+        "hasDiagram": false,
+        "subsections": [
+          {
+            "title": "8.1 Directory Services Integration",
+            "content": "Objective: Integrate CyberArk with Active Directory (AD) or other directory services. Configure LDAP or SAML authentication. Map CyberArk roles to AD groups."
+          },
+          {
+            "title": "8.2 SIEM Integration",
+            "content": "Objective: Integrate CyberArk with a Security Information and Event Management (SIEM) system for centralized logging. Configure log forwarding from CyberArk to the SIEM solution. Set up correlation rules in the SIEM for PAM-related alerts."
+          }
+        ],
+        "tables": []
+      },
+      {
+        "title": "Phase 9: Testing and Validation",
+        "intro": "",
+        "hasDiagram": false,
+        "subsections": [
+          {
+            "title": "9.1 Functional Testing",
+            "content": "Objective: Ensure that all CyberArk functionalities work as expected. Test privileged account retrieval, session monitoring, and password rotation. Validate that access controls and policies enforce the desired restrictions."
+          },
+          {
+            "title": "9.2 Security Testing",
+            "content": "Objective: Verify that CyberArk is secure and resistant to common attacks. Conduct vulnerability scans and penetration testing. Ensure compliance with your organization\u2019s security policies."
+          }
+        ],
+        "tables": []
+      },
+      {
+        "title": "Phase 10: Training and Change Management",
+        "intro": "",
+        "hasDiagram": false,
+        "subsections": [
+          {
+            "title": "10.1 User Training",
+            "content": "Objective: Train end-users and administrators on CyberArk usage. Provide training materials and hands-on sessions for CyberArk users. Address any user-specific concerns or questions about the transition."
+          },
+          {
+            "title": "10.2 Change Management",
+            "content": "Objective: Manage change effectively to ensure a smooth migration. Establish a communication plan to inform stakeholders of changes. Document all changes and update internal documentation as necessary."
+          }
+        ],
+        "tables": []
+      },
+      {
+        "title": "Phase 11: Go-Live and Support",
+        "intro": "",
+        "hasDiagram": false,
+        "subsections": [
+          {
+            "title": "11.1 Production Rollout",
+            "content": "Objective: Move the CyberArk solution into production, ensuring all configurations and policies are active. Transition CyberArk into the production environment. Verify all services and integrations are functioning as expected. Ensure all user accounts are correctly provisioned and access policies are applied."
+          },
+          {
+            "title": "11.2 Hypercare Support",
+            "content": "Objective: Provide intensified support during the initial period post-Go-Live to address any issues that arise. Monitor system performance and user activity closely. Quickly address any issues or incidents reported by end-users or administrators. Review incident logs for any adjustments or improvements required in the setup."
+          }
+        ],
+        "tables": []
+      },
+      {
+        "title": "Phase 12: Post-Implementation Review and Continuous Improvement",
+        "intro": "",
+        "hasDiagram": false,
+        "subsections": [
+          {
+            "title": "12.1 Post-Implementation Review",
+            "content": "Objective: Conduct a review after Go-Live to assess the success of the migration and identify any improvements. Gather feedback from all stakeholders on the new CyberArk environment. Analyze performance metrics and incident reports to identify any areas for improvement. Document lessons learned and recommended adjustments to the PAM processes."
+          },
+          {
+            "title": "12.2 Continuous Improvement Plan",
+            "content": "Objective: Establish a plan to continually optimize and enhance the CyberArk PAM solution. Implement a regular review process for PAM policies and configurations. Schedule periodic audits to ensure compliance with evolving security standards. Plan for future enhancements to address emerging PAM needs."
+          }
+        ],
+        "tables": []
+      },
+      {
+        "title": "Appendix A: Roles and Responsibilities",
+        "intro": "This appendix outlines the roles and responsibilities of each team member involved in the PAM migration project. \n             \n                 \n                     \n                         Role \n                         Responsibilities \n                     \n                 \n                 \n                     \n                         Project Manager \n                         Oversees the project, manages timelines, and coordinates between teams. \n                     \n                ",
+        "hasDiagram": false,
+        "subsections": [],
+        "tables": [
+          [
+            [
+              "Role",
+              "Responsibilities"
+            ],
+            [
+              "Project Manager",
+              "Oversees the project, manages timelines, and coordinates between teams."
+            ],
+            [
+              "System Administrator",
+              "Handles the infrastructure setup and configuration for CyberArk components."
+            ],
+            [
+              "Security Specialist",
+              "Ensures all security requirements are met and conducts security testing."
+            ],
+            [
+              "End-User Support",
+              "Provides support and training to users on the new PAM system."
+            ]
+          ]
+        ]
+      },
+      {
+        "title": "Appendix B: Project Timeline",
+        "intro": "This appendix provides a high-level overview of the project timeline, showing key milestones for each phase. \n             \n                  Phase 1:  Project Kickoff - Week 1 \n                  Phase 2:  Assessment of Current Environment - Weeks 2-3 \n                  Phase 3:  Design - Weeks 4-6 \n                  Phase 4:  Implementation Planning - Weeks 7-8 \n                  Phase 5:  Environment Preparation - Weeks 9-10 \n                  Phase 6:  Data Migration - Weeks 11-12 \n          ",
+        "hasDiagram": false,
+        "subsections": [],
+        "tables": []
+      },
+      {
+        "title": "Appendix C: Risk Management Plan",
+        "intro": "This appendix outlines the potential risks for the PAM migration project and the mitigation strategies in place. \n             \n                 \n                     \n                         Risk \n                         Impact \n                         Mitigation Strategy \n                     \n                 \n                 \n                     \n                         Data loss during migration \n                         High \n                         Regular backups and thorough test",
+        "hasDiagram": false,
+        "subsections": [],
+        "tables": [
+          [
+            [
+              "Risk",
+              "Impact",
+              "Mitigation Strategy"
+            ],
+            [
+              "Data loss during migration",
+              "High",
+              "Regular backups and thorough testing before migration."
+            ],
+            [
+              "Unauthorized access during transition",
+              "Medium",
+              "Enable multi-factor authentication and monitor access logs."
+            ],
+            [
+              "Delay in project timeline",
+              "Medium",
+              "Set realistic deadlines and allocate additional resources if needed."
+            ],
+            [
+              "Integration issues with existing systems",
+              "High",
+              "Perform integration testing and engage vendors for support if required."
+            ]
+          ]
+        ]
+      }
+    ]
+  },
+  "GoogleChronicleSIEM": {
+    "slug": "GoogleChronicleSIEM",
+    "title": "IBM Qradar to Google Chronicle",
+    "subtitle": "Complete Technical Implementation Reference & SIEM Modernization",
+    "badge": "SIEM Migration Accelerator",
+    "htmlFile": "mig_chronicle.html",
+    "blocks": [
+      {
+        "type": "heading",
+        "text": "&nbsp;"
+      },
+      {
+        "type": "heading",
+        "text": "Google Chronicle Migration Guide"
+      },
+      {
+        "type": "heading",
+        "text": "Complete Technical Implementation Reference - Version 1.0.0"
+      },
+      {
+        "type": "heading",
+        "text": "Document Control"
+      },
+      {
+        "type": "table",
+        "data": [
+          [
+            "Version",
+            "Date",
+            "Author",
+            "Change Description"
+          ],
+          [
+            "1.0.0",
+            "2024-11-04",
+            "Security Engineering Team",
+            "Initial Release"
+          ]
+        ]
+      },
+      {
+        "type": "heading",
+        "text": "Document Status"
+      },
+      {
+        "type": "heading",
+        "text": "Status : Approved Classification : Internal Technical Reference Review Cycle : Quarterly"
+      },
+      {
+        "type": "heading",
+        "text": "Revision History"
+      },
+      {
+        "type": "table",
+        "data": [
+          [
+            "Version",
+            "Date",
+            "Author",
+            "Changes"
+          ],
+          [
+            "0.1.0",
+            "2024-11-01",
+            "Security Engineering",
+            "Initial Draft"
+          ],
+          [
+            "0.2.0",
+            "2024-11-02",
+            "Security Engineering",
+            "Added Technical Sections"
+          ],
+          [
+            "1.0.0",
+            "2024-11-04",
+            "Security Engineering",
+            "Final Release"
+          ]
+        ]
+      },
+      {
+        "type": "heading",
+        "text": "Master Table of Contents"
+      },
+      {
+        "type": "heading",
+        "text": "Core Implementation Guide"
+      },
+      {
+        "type": "text",
+        "text": "Executive Summary Introduction GCP and Chronicle Prerequisites &nbsp; 3.1 GCP Organization Setup 3.2 Service Account Setup 3.3 Network Configuration Project Overview &nbsp; 4.1 Migration Phases and Timeline 4.2 Success Criteria Matrix 4.3 Risk Assessment Matrix UDM Implementation &nbsp; 5.1 UDM Architecture Overview 5.2 UDM Field Mapping Framework 5.3 Log Source Configuration 5.4 Data Transformation Pipeline 5.5 Chronicle Ingestion Configuration Rule Migration Strategy &nbsp; 6.1 YARA-L Overview and Best Practices 6.2 Rule Migration Examples 6.3 Rule Migration Framework 6.4 Chronicle Rule Management Google Security Suite Integration &nbsp; 7.1 Siemplify SOAR Integration 7.2 Mandiant Threat Intelligence Integration 7.3 Alert Correlation and Enrichment Operational Procedures and Testing &nbsp; 8.1 Testing Framework 8.2 Migration Validation 8.3 Operational Monitoring 8.4 Post-Migration Procedures"
+      },
+      {
+        "type": "heading",
+        "text": "Appendices"
+      },
+      {
+        "type": "heading",
+        "text": "A. Configuration Templates &nbsp;"
+      },
+      {
+        "type": "heading",
+        "text": "B. UDM Mapping References &nbsp;"
+      },
+      {
+        "type": "heading",
+        "text": "C. YARA-L Rule Library &nbsp;"
+      },
+      {
+        "type": "heading",
+        "text": "D. Integration Configurations &nbsp;"
+      },
+      {
+        "type": "heading",
+        "text": "E. Validation Checklists &nbsp;"
+      },
+      {
+        "type": "heading",
+        "text": "F. Troubleshooting Guide &nbsp;"
+      },
+      {
+        "type": "heading",
+        "text": "G. Performance Tuning Guide"
+      },
+      {
+        "type": "heading",
+        "text": "&nbsp;"
+      },
+      {
+        "type": "heading",
+        "text": "&nbsp;"
+      },
+      {
+        "type": "heading",
+        "text": "&nbsp;"
+      },
+      {
+        "type": "heading",
+        "text": "PART 1: FOUNDATION AND SETUP"
+      },
+      {
+        "type": "heading",
+        "text": "&nbsp;"
+      },
+      {
+        "type": "heading",
+        "text": "1. Executive Summary"
+      },
+      {
+        "type": "heading",
+        "text": "&nbsp;"
+      },
+      {
+        "type": "text",
+        "text": "This comprehensive technical guide provides detailed instructions for migrating from any existing SIEM solution to Google Chronicle. It serves as the authoritative reference for security engineers, focusing on technical specifications, configurations, and operational procedures required for a successful migration."
+      },
+      {
+        "type": "heading",
+        "text": "&nbsp;"
+      },
+      {
+        "type": "heading",
+        "text": "Key Objectives"
+      },
+      {
+        "type": "heading",
+        "text": "- Complete migration of existing SIEM functionality to Google Chronicle"
+      },
+      {
+        "type": "heading",
+        "text": "- Implementation of UDM-based log ingestion and normalization"
+      },
+      {
+        "type": "heading",
+        "text": "- Configuration of detection rules and alerts"
+      },
+      {
+        "type": "heading",
+        "text": "- Integration with Google&apos;s security ecosystem"
+      },
+      {
+        "type": "heading",
+        "text": "- Establishment of operational procedures and monitoring"
+      },
+      {
+        "type": "heading",
+        "text": "&nbsp;"
+      },
+      {
+        "type": "heading",
+        "text": "Critical Success Factors"
+      },
+      {
+        "type": "heading",
+        "text": "success_factors:"
+      },
+      {
+        "type": "heading",
+        "text": "&nbsp; &nbsp;data_integrity:"
+      },
+      {
+        "type": "heading",
+        "text": "&nbsp; &nbsp; - &quot;Zero data loss during migration&quot;"
+      },
+      {
+        "type": "heading",
+        "text": "&nbsp; &nbsp; - &quot;Complete historical data transfer&quot;"
+      },
+      {
+        "type": "heading",
+        "text": "&nbsp; &nbsp; - &quot;Field mapping accuracy &gt; 99.9%&quot;"
+      },
+      {
+        "type": "heading",
+        "text": "&nbsp; &nbsp;&nbsp;"
+      },
+      {
+        "type": "heading",
+        "text": "&nbsp; operational_continuity:"
+      },
+      {
+        "type": "heading",
+        "text": "&nbsp; &nbsp; - &quot;Minimal detection gaps&quot;"
+      },
+      {
+        "type": "heading",
+        "text": "&nbsp; &nbsp; - &quot;No critical alert disruption&quot;"
+      },
+      {
+        "type": "heading",
+        "text": "&nbsp; &nbsp; - &quot;SOC workflow preservation&quot;"
+      },
+      {
+        "type": "heading",
+        "text": "&nbsp; &nbsp;&nbsp;"
+      },
+      {
+        "type": "heading",
+        "text": "&nbsp; &nbsp;performance_metrics:"
+      },
+      {
+        "type": "heading",
+        "text": "&nbsp; &nbsp; - &quot;Query response time &lt; 3 seconds&quot;"
+      },
+      {
+        "type": "heading",
+        "text": "&nbsp; &nbsp; - &quot;Ingestion latency &lt; 5 minutes&quot;"
+      },
+      {
+        "type": "heading",
+        "text": "&nbsp; &nbsp; - &quot;Rule execution time &lt; 60 seconds&quot;"
+      },
+      {
+        "type": "heading",
+        "text": "&nbsp;"
+      },
+      {
+        "type": "heading",
+        "text": "2. Introduction"
+      },
+      {
+        "type": "heading",
+        "text": "&nbsp;"
+      },
+      {
+        "type": "heading",
+        "text": "2.1 Purpose"
+      },
+      {
+        "type": "heading",
+        "text": "This document provides security engineers with detailed technical guidance for:"
+      },
+      {
+        "type": "heading",
+        "text": "- Planning and executing the Chronicle migration"
+      },
+      {
+        "type": "heading",
+        "text": "- Implementing data ingestion and normalization"
+      },
+      {
+        "type": "heading",
+        "text": "- Converting detection rules to YARA-L"
+      },
+      {
+        "type": "heading",
+        "text": "- Integrating with security tools"
+      },
+      {
+        "type": "heading",
+        "text": "- Validating the migration success"
+      },
+      {
+        "type": "heading",
+        "text": "&nbsp;"
+      },
+      {
+        "type": "heading",
+        "text": "2.2 Scope"
+      },
+      {
+        "type": "heading",
+        "text": "in_scope:"
+      },
+      {
+        "type": "heading",
+        "text": "&nbsp; - Chronicle instance deployment and configuration"
+      },
+      {
+        "type": "heading",
+        "text": "&nbsp; - Data source migration and UDM implementation"
+      },
+      {
+        "type": "heading",
+        "text": "&nbsp; - Rule conversion and validation"
+      },
+      {
+        "type": "heading",
+        "text": "&nbsp; - Integration with security tools"
+      },
+      {
+        "type": "heading",
+        "text": "&nbsp; - Operational procedures and monitoring"
+      },
+      {
+        "type": "heading",
+        "text": "&nbsp; - Knowledge transfer and documentation"
+      },
+      {
+        "type": "heading",
+        "text": "&nbsp;"
+      },
+      {
+        "type": "heading",
+        "text": "out_of_scope:"
+      },
+      {
+        "type": "heading",
+        "text": "&nbsp; - Hardware procurement"
+      },
+      {
+        "type": "heading",
+        "text": "&nbsp; - Network infrastructure changes"
+      },
+      {
+        "type": "heading",
+        "text": "&nbsp; - Security policy modifications"
+      },
+      {
+        "type": "heading",
+        "text": "&nbsp; - End-user training"
+      },
+      {
+        "type": "heading",
+        "text": "```"
+      },
+      {
+        "type": "heading",
+        "text": "&nbsp;"
+      },
+      {
+        "type": "heading",
+        "text": "3. GCP and Chronicle Prerequisites"
+      },
+      {
+        "type": "heading",
+        "text": "&nbsp;"
+      },
+      {
+        "type": "heading",
+        "text": "3.1 GCP Organization Setup"
+      },
+      {
+        "type": "heading",
+        "text": "&nbsp;"
+      },
+      {
+        "type": "heading",
+        "text": "3.1.1 Required Organization Policies"
+      },
+      {
+        "type": "heading",
+        "text": "resource &quot;google_organization_policy&quot; &quot;security_policy&quot; {"
+      },
+      {
+        "type": "heading",
+        "text": "&nbsp; &nbsp;org_id &nbsp; &nbsp; = &quot;your-org-id&quot;"
+      },
+      {
+        "type": "heading",
+        "text": "&nbsp; &nbsp;constraint = &quot;security.restrictApiAccess&quot;"
+      },
+      {
+        "type": "heading",
+        "text": "&nbsp;"
+      },
+      {
+        "type": "heading",
+        "text": "&nbsp; &nbsp;boolean_policy {"
+      },
+      {
+        "type": "heading",
+        "text": "&nbsp; &nbsp; &nbsp;enforced = true"
+      },
+      {
+        "type": "heading",
+        "text": "&nbsp; }"
+      },
+      {
+        "type": "heading",
+        "text": "&nbsp;"
+      },
+      {
+        "type": "text",
+        "text": "resource &quot;google_organization_policy&quot; &quot;trusted_image_policy&quot; {"
+      },
+      {
+        "type": "heading",
+        "text": "&nbsp; &nbsp;org_id &nbsp; &nbsp; = &quot;your-org-id&quot;"
+      },
+      {
+        "type": "heading",
+        "text": "&nbsp; &nbsp;constraint = &quot;compute.trustedImageProjects&quot;"
+      },
+      {
+        "type": "heading",
+        "text": "&nbsp;"
+      },
+      {
+        "type": "heading",
+        "text": "&nbsp; &nbsp;list_policy {"
+      },
+      {
+        "type": "heading",
+        "text": "&nbsp; &nbsp; &nbsp;allow {"
+      },
+      {
+        "type": "heading",
+        "text": "&nbsp; &nbsp; &nbsp; &nbsp;values = [&quot;projects/chronicle-public&quot;]"
+      },
+      {
+        "type": "heading",
+        "text": "&nbsp; &nbsp; }"
+      }
+    ]
+  },
+  "SplunkSIEM": {
+    "slug": "SplunkSIEM",
+    "title": "IBM Qradar to Splunk SIEM",
+    "subtitle": "Comprehensive SOC Migration Plan: Migrating from Any SIEM to Splunk",
+    "badge": "SOC Migration Accelerator",
+    "htmlFile": "mig_splunk.html",
+    "blocks": [
+      {
+        "type": "heading",
+        "text": "Comprehensive SOC Migration Plan: Migrating from Any SIEM to Splunk"
+      },
+      {
+        "type": "heading",
+        "text": "Table of Contents"
+      },
+      {
+        "type": "text",
+        "text": "Executive&nbsp;Summary Introduction Project&nbsp;Overview 3.1&nbsp; Objectives 3.2&nbsp; Scope 3.3&nbsp; Assumptions 3.4&nbsp; Constraints Detailed&nbsp;Project&nbsp;Plan 4.1&nbsp; Project&nbsp;Timeline 4.2&nbsp; Milestones Technical&nbsp;Migration&nbsp;Steps 5.1&nbsp; Current&nbsp;SIEM&nbsp;Analysis 5.2&nbsp; Infrastructure&nbsp;Preparation 5.3&nbsp; Splunk&nbsp;Deployment 5.4&nbsp; Data&nbsp;Ingestion&nbsp;and&nbsp;Parsing 5.5&nbsp; Use&nbsp;Case&nbsp;and&nbsp;Integration&nbsp;Migration Parser&nbsp;Writing&nbsp;and&nbsp;Data&nbsp;Normalization 6.1&nbsp; Field&nbsp;Extraction 6.2&nbsp; Custom&nbsp;Parser&nbsp;Development Checklists 7.1&nbsp; Pre-Migration&nbsp;Checklist 7.2&nbsp; Migration&nbsp;Checklist 7.3&nbsp; Post-Migration&nbsp;Checklist RACI&nbsp;Matrix Risk&nbsp;Management Communication&nbsp;Plan Training&nbsp;and&nbsp;Knowledge&nbsp;Transfer Post-Migration&nbsp;Support Conclusion Appendices A.&nbsp; Data&nbsp;Source&nbsp;Inventory&nbsp;Template B.&nbsp; Parser&nbsp;Development&nbsp;Template C.&nbsp; Detailed&nbsp;Project&nbsp;Schedule D.&nbsp; Contact&nbsp;List"
+      },
+      {
+        "type": "heading",
+        "text": "Executive Summary"
+      },
+      {
+        "type": "text",
+        "text": "This document provides a detailed, engineer-level migration plan for transitioning from any existing SIEM to Splunk. It includes comprehensive technical steps, parser writing guidelines, checklists, tables, and templates to ensure a successful migration that can be handed over to the customer with confidence."
+      },
+      {
+        "type": "heading",
+        "text": "Introduction"
+      },
+      {
+        "type": "text",
+        "text": "Migrating a Security Operations Center (SOC) from one SIEM platform to another is a complex task that requires meticulous planning and execution. This document serves as a step-by-step guide for engineers to execute the migration, covering all technical aspects, including parser writing, data normalization, and integration with other security tools like SOAR, UEBA, NAC, and NDR."
+      },
+      {
+        "type": "heading",
+        "text": "Project Overview"
+      },
+      {
+        "type": "heading",
+        "text": "3.1 Objectives"
+      },
+      {
+        "type": "text",
+        "text": "Seamless Transition : Migrate to Splunk without disrupting existing SOC operations. Technical Excellence : Provide detailed technical steps for engineers. Customer Satisfaction : Ensure the final deliverable meets customer expectations and compliance requirements."
+      },
+      {
+        "type": "heading",
+        "text": "3.2 Scope"
+      },
+      {
+        "type": "text",
+        "text": "In-Scope : Migration of all SIEM functionalities to Splunk. Parser development and data normalization. Integration with SOAR, UEBA, NAC, and NDR tools."
+      },
+      {
+        "type": "text",
+        "text": "Changes to existing security policies. Procurement of new hardware unless identified as necessary."
+      },
+      {
+        "type": "heading",
+        "text": "3.3 Assumptions"
+      },
+      {
+        "type": "text",
+        "text": "Access to all necessary systems and data sources. Availability of necessary licenses for Splunk and associated tools. Support from the customer's IT and security teams."
+      },
+      {
+        "type": "heading",
+        "text": "3.4 Constraints"
+      },
+      {
+        "type": "text",
+        "text": "Limited downtime for critical systems. Compliance requirements for data handling and storage. Budget limitations for additional resources."
+      },
+      {
+        "type": "heading",
+        "text": "Detailed Project Plan"
+      },
+      {
+        "type": "heading",
+        "text": "4.1 Project Timeline"
+      },
+      {
+        "type": "table",
+        "data": [
+          [
+            "Phase",
+            "Duration",
+            "Start Date",
+            "End Date"
+          ],
+          [
+            "1. Initiation",
+            "1 week",
+            "Day 1",
+            "Day 5"
+          ],
+          [
+            "2. Assessment &amp; Planning",
+            "2 weeks",
+            "Day 6",
+            "Day 20"
+          ],
+          [
+            "3. Infrastructure Preparation",
+            "2 weeks",
+            "Day 21",
+            "Day 35"
+          ],
+          [
+            "4. Splunk Deployment",
+            "2 weeks",
+            "Day 36",
+            "Day 50"
+          ],
+          [
+            "5. Data Ingestion &amp; Parsing",
+            "4 weeks",
+            "Day 51",
+            "Day 80"
+          ],
+          [
+            "6. Use Case Migration",
+            "3 weeks",
+            "Day 81",
+            "Day 100"
+          ],
+          [
+            "7. Testing &amp; Validation",
+            "2 weeks",
+            "Day 101",
+            "Day 115"
+          ],
+          [
+            "8. Training &amp; Knowledge Transfer",
+            "1 week",
+            "Day 116",
+            "Day 120"
+          ],
+          [
+            "9. Cutover &amp; Go-Live",
+            "1 week",
+            "Day 121",
+            "Day 125"
+          ],
+          [
+            "10. Post-Migration Support",
+            "2 weeks",
+            "Day 126",
+            "Day 140"
+          ]
+        ]
+      },
+      {
+        "type": "heading",
+        "text": "4.2 Milestones"
+      },
+      {
+        "type": "text",
+        "text": "M1 : Completion of Current SIEM Analysis M2 : Infrastructure Ready for Deployment M3 : Splunk Installed and Configured M4 : All Data Sources Onboarded M5 : Use Cases and Rules Migrated M6 : Successful Testing and Validation M7 : Staff Trained M8 : Go-Live M9 : Project Closure"
+      },
+      {
+        "type": "heading",
+        "text": "Technical Migration Steps"
+      },
+      {
+        "type": "heading",
+        "text": "5.1 Current SIEM Analysis"
+      },
+      {
+        "type": "heading",
+        "text": "5.1.1 Data Source Inventory"
+      },
+      {
+        "type": "heading",
+        "text": "Create a detailed inventory of all data sources. Use the template provided in&nbsp; Appendix A ."
+      },
+      {
+        "type": "text",
+        "text": "Collect Details : Source Name IP Address Log Type (e.g., syslog, Windows Event Logs) Current Log Collection Method Log Volume (GB/day) Retention Policy"
+      },
+      {
+        "type": "heading",
+        "text": "5.1.2 Event and Log Types"
+      },
+      {
+        "type": "heading",
+        "text": "Categorize Logs : Security Logs Application Logs System Logs Network Logs"
+      },
+      {
+        "type": "heading",
+        "text": "Custom applications Proprietary log formats"
+      },
+      {
+        "type": "heading",
+        "text": "5.2 Infrastructure Preparation"
+      },
+      {
+        "type": "heading",
+        "text": "5.2.1 Sizing and Capacity Planning"
+      },
+      {
+        "type": "text",
+        "text": "Calculate Daily Ingest Volume : Sum up the log volume from all data sources. Add a buffer for future growth (e.g., 20%)."
+      },
+      {
+        "type": "table",
+        "data": [
+          [
+            "Component",
+            "Quantity",
+            "CPU Cores",
+            "Memory (GB)",
+            "Storage (TB)"
+          ],
+          [
+            "Indexers",
+            "3",
+            "16",
+            "32",
+            "10"
+          ],
+          [
+            "Search Heads",
+            "2",
+            "16",
+            "32",
+            "1"
+          ],
+          [
+            "Deployment Server",
+            "1",
+            "8",
+            "16",
+            "1"
+          ]
+        ]
+      },
+      {
+        "type": "heading",
+        "text": "5.2.2 Network Configuration"
+      },
+      {
+        "type": "heading",
+        "text": "Open Required Ports : Splunk Web: 8000 Management Port: 8089 Indexing Port: 9997 KV Store: 8191"
+      },
+      {
+        "type": "text",
+        "text": "Allow communication between forwarders and indexers. Permit management traffic between deployment server and forwarders."
+      },
+      {
+        "type": "heading",
+        "text": "5.3 Splunk Deployment"
+      },
+      {
+        "type": "heading",
+        "text": "5.3.1 Installation Steps"
+      },
+      {
+        "type": "text",
+        "text": "Install Splunk Enterprise : Follow Splunk's installation guide for Linux/Windows. Use the same Splunk version across all components."
+      },
+      {
+        "type": "text",
+        "text": "Set up a cluster master node. Configure peer nodes (indexers) to join the cluster."
+      },
+      {
+        "type": "text",
+        "text": "Deploy a deployer node. Configure search heads to join the cluster."
+      },
+      {
+        "type": "heading",
+        "text": "5.3.2 Security Hardening"
+      },
+      {
+        "type": "heading",
+        "text": "Implement SSL/TLS : Generate or obtain SSL certificates. Configure Splunk to use SSL for all communications."
+      },
+      {
+        "type": "text",
+        "text": "Integrate with LDAP/Active Directory. Set up role-based access control."
+      },
+      {
+        "type": "heading",
+        "text": "5.4 Data Ingestion and Parsing"
+      },
+      {
+        "type": "heading",
+        "text": "5.4.1 Onboarding Data Sources"
+      },
+      {
+        "type": "text",
+        "text": "Install Universal Forwarders : Deploy on all servers and devices where logs are collected. Use the deployment server to manage configurations."
+      },
+      {
+        "type": "heading",
+        "text": "Use&nbsp;inputs.conf&nbsp;to define data inputs. Example:"
+      },
+      {
+        "type": "heading",
+        "text": "makefile"
+      },
+      {
+        "type": "heading",
+        "text": "Copy code"
+      },
+      {
+        "type": "heading",
+        "text": "[monitor://var/log/syslog]"
+      },
+      {
+        "type": "heading",
+        "text": "disabled = false"
+      },
+      {
+        "type": "heading",
+        "text": "sourcetype = syslog"
+      },
+      {
+        "type": "heading",
+        "text": "index = main"
+      },
+      {
+        "type": "heading",
+        "text": "5.4.2 Data Parsing and Normalization"
+      },
+      {
+        "type": "heading",
+        "text": "Set Up Parsing Rules : Use&nbsp;props.conf&nbsp;and&nbsp;transforms.conf&nbsp;for parsing."
+      },
+      {
+        "type": "heading",
+        "text": "csharp"
+      },
+      {
+        "type": "heading",
+        "text": "Copy code"
+      },
+      {
+        "type": "heading",
+        "text": "[mysourcetype]"
+      },
+      {
+        "type": "heading",
+        "text": "REPORT-myfields = extract_myfields"
+      },
+      {
+        "type": "heading",
+        "text": "Example&nbsp;transforms.conf :"
+      },
+      {
+        "type": "heading",
+        "text": "scss"
+      },
+      {
+        "type": "heading",
+        "text": "Copy code"
+      },
+      {
+        "type": "heading",
+        "text": "[extract_myfields]"
+      },
+      {
+        "type": "heading",
+        "text": "REGEX = (?&lt;field1&gt;\\w+)\\s+(?&lt;field2&gt;\\d+)"
+      },
+      {
+        "type": "heading",
+        "text": "5.5 Use Case and Integration Migration"
+      },
+      {
+        "type": "heading",
+        "text": "5.5.1 Rule and Alert Migration"
+      },
+      {
+        "type": "heading",
+        "text": "Identify Existing Rules : List all correlation rules from the current SIEM."
+      },
+      {
+        "type": "heading",
+        "text": "Rewrite rules using Splunk's Search Processing Language (SPL). Example :"
+      },
+      {
+        "type": "heading",
+        "text": "Current SIEM Rule:"
+      },
+      {
+        "type": "heading",
+        "text": "Condition : Failed login attempts &gt; 5 within 10 minutes."
+      },
+      {
+        "type": "heading",
+        "text": "Splunk SPL:"
+      },
+      {
+        "type": "heading",
+        "text": "csharp"
+      },
+      {
+        "type": "heading",
+        "text": "Copy code"
+      },
+      {
+        "type": "heading",
+        "text": "index=authentication sourcetype=auth_logs action=failure"
+      },
+      {
+        "type": "heading",
+        "text": "| stats count by user"
+      },
+      {
+        "type": "heading",
+        "text": "| where count &gt; 5"
+      },
+      {
+        "type": "heading",
+        "text": "5.5.2 Dashboard and Report Migration"
+      },
+      {
+        "type": "heading",
+        "text": "Recreate Dashboards : Use Splunk's Dashboard Editor. Import visualizations from the current SIEM if possible."
+      },
+      {
+        "type": "text",
+        "text": "Set up scheduled searches and configure email notifications."
+      },
+      {
+        "type": "heading",
+        "text": "Parser Writing and Data Normalization"
+      },
+      {
+        "type": "heading",
+        "text": "6.1 Field Extraction"
+      },
+      {
+        "type": "heading",
+        "text": "Use the Field Extractor (FX) : Accessible via Splunk Web. Suitable for simple extractions."
+      },
+      {
+        "type": "text",
+        "text": "For complex log formats, write custom regular expressions."
+      },
+      {
+        "type": "heading",
+        "text": "Log Line:"
+      },
+      {
+        "type": "heading",
+        "text": "bash"
+      },
+      {
+        "type": "heading",
+        "text": "Regex :"
+      },
+      {
+        "type": "heading",
+        "text": "6.2 Custom Parser Development"
+      },
+      {
+        "type": "heading",
+        "text": "Steps for Parser Development : Collect Sample Logs : Gather representative log samples from each data source."
+      },
+      {
+        "type": "text",
+        "text": "Determine which fields are necessary for analysis and correlation."
+      },
+      {
+        "type": "text",
+        "text": "Develop regex patterns to extract the required fields."
+      },
+      {
+        "type": "text",
+        "text": "Use the&nbsp;regex&nbsp;command in Splunk or external tools like regex101.com."
+      },
+      {
+        "type": "text",
+        "text": "Add regex patterns to&nbsp;transforms.conf."
+      },
+      {
+        "type": "heading",
+        "text": "Checklists"
+      },
+      {
+        "type": "heading",
+        "text": "7.1 Pre-Migration Checklist"
+      },
+      {
+        "type": "text",
+        "text": "&nbsp;Complete data source inventory. &nbsp;Validate access to all data sources. &nbsp;Obtain necessary licenses. &nbsp;Provision required hardware or cloud resources. &nbsp;Prepare network infrastructure (firewalls, ports). &nbsp;Schedule downtime if necessary."
+      },
+      {
+        "type": "heading",
+        "text": "7.2 Migration Checklist"
+      },
+      {
+        "type": "text",
+        "text": "&nbsp;Install Splunk components (indexers, search heads, etc.). &nbsp;Configure indexer and search head clusters. &nbsp;Implement security measures (SSL/TLS, authentication). &nbsp;Deploy universal forwarders to data sources. &nbsp;Configure data inputs (inputs.conf). &nbsp;Develop and test parsers (props.conf,&nbsp;transforms.conf). &nbsp;Onboard all data sources. &nbsp;Migrate correlation rules to SPL. &nbsp;Recreate dashboards and reports. &nbsp;Integrate SOAR, UEBA, NAC, and NDR tools. &nbsp;Conduct functional and performance testing."
+      },
+      {
+        "type": "heading",
+        "text": "7.3 Post-Migration Checklist"
+      }
+    ]
+  }
+}

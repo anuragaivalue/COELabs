@@ -1,0 +1,11 @@
+ChaiUI & Shadcn UI Components
+==============================
+
+The UI components and styling conventions borrowed from ChaiUI (https://ui.chaicode.com)
+and shadcn/ui (https://ui.shadcn.com) are licensed under the MIT License.
+
+Copyright (c) 2024-2026 ChaiCode and shadcn contributors.
+
+Permission is hereby granted to use, copy, modify, and distribute these components
+for commercial and non-commercial web applications, provided that original notices
+are preserved.

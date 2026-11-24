@@ -1,0 +1,24 @@
+Fonts Used in iValue COE Project
+====================================
+
+The web fonts utilized in this application are distributed under the SIL Open Font License, Version 1.1 (OFL-1.1).
+
+1. Manrope
+- Designer: Mikhail Sharanda
+- License: SIL Open Font License 1.1
+- Repository: https://github.com/sharanda/manrope
+- Official Specification: https://openfontlicense.org/
+
+2. Montserrat
+- Designers: Julieta Ulanovsky, Sol Matas, Juan Pablo del Peral, Jacques Le Bailly
+- License: SIL Open Font License 1.1
+- Repository: https://github.com/JulietaUla/Montserrat
+- Official Specification: https://openfontlicense.org/
+
+3. Onest
+- Designer: Dmitrii Rassokhine
+- License: SIL Open Font License 1.1
+- Repository: https://github.com/sannakander/Onest
+- Official Specification: https://openfontlicense.org/
+
+Under the terms of OFL-1.1, these fonts are freely usable, modifiable, and distributable in digital products.
