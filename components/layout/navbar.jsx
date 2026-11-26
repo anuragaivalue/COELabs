@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useSession, signOut } from "next-auth/react";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { IValueLogo } from "@/components/ui/ivalue-logo";
 import { navigationConfig } from "@/data/navigation";
@@ -13,6 +14,9 @@ import {
   ChevronRight,
   ShoppingBag,
   LogIn,
+  LogOut,
+  User,
+  ShieldCheck,
   Cpu,
   Building2,
   ArrowRight,
@@ -27,11 +31,37 @@ import { cn } from "@/lib/utils";
  */
 export function Navbar() {
   const pathname = usePathname();
+  const { data: session, status } = useSession();
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileSubmenu, setMobileSubmenu] = useState(null);
   const [activeDropdown, setActiveDropdown] = useState(null);
+  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const timeoutRef = useRef(null);
+  const profileDropdownRef = useRef(null);
+
+  const isAuthenticated = status === "authenticated" && !!session?.user;
+  const currentUser = session?.user;
+  const userType = currentUser?.userType || currentUser?.role || "user";
+  const userImage = currentUser?.image;
+  const userName = currentUser?.name || currentUser?.email || "User";
+  const userInitial = (userName.charAt(0) || "U").toUpperCase();
+  const dashboardLink = userType === "admin" ? "/dashboard/admin" : "/dashboard/user";
+
+  // Close profile dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        profileDropdownRef.current &&
+        !profileDropdownRef.current.contains(event.target)
+      ) {
+        setProfileDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const handleMouseEnter = (dropdownKey) => {
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
@@ -94,9 +124,9 @@ export function Navbar() {
         {/* CONTAINER 1 (LEFT): iValue logo / brand mark             */}
         {/* ======================================================== */}
         <div className="flex items-center shrink-0 min-w-max mr-3 lg:mr-4 xl:mr-6">
-          <a href="/" className="flex items-center group cursor-pointer shrink-0">
+          <Link href="/" className="flex items-center group cursor-pointer shrink-0">
             <IValueLogo className="h-6 sm:h-7 lg:h-7.5" showCoe={true} />
-          </a>
+          </Link>
         </div>
 
         {/* ======================================================== */}
@@ -108,12 +138,12 @@ export function Navbar() {
         <nav className="hidden lg:flex items-center justify-center flex-nowrap whitespace-nowrap gap-0.5 xl:gap-1.5 2xl:gap-2.5 shrink-0">
 
           {/* 1. Home (Internal) */}
-          <a href="/" className={getNavLinkClass(isHomeActive)}>
+          <Link href="/" className={getNavLinkClass(isHomeActive)}>
             <span>Home</span>
             {isHomeActive && (
               <span className="absolute -bottom-1 left-1.5 right-1.5 h-0.5 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 dark:from-amber-400 dark:to-amber-500 animate-in fade-in zoom-in-90 duration-200" />
             )}
-          </a>
+          </Link>
 
           {/* 2. OEM (Internal) */}
           <a href="/oem" className={getNavLinkClass(isOemActive)}>
@@ -244,14 +274,14 @@ export function Navbar() {
                   {/* Dropdown Footer */}
                   <div className="mt-3 pt-3 border-t border-neutral-100 dark:border-white/10 flex items-center justify-between text-[11px] px-2">
                     <span className="text-neutral-400">34 Validated Multistack Blueprints</span>
-                    <a
+                    <Link
                       href="/#values"
                       onClick={() => setActiveDropdown(null)}
                       className="font-semibold text-amber-700 hover:text-amber-800 dark:text-amber-400 dark:hover:text-amber-300 inline-flex items-center gap-1"
                     >
                       <span>Explore all 34+ solution stacks</span>
                       <ArrowRight className="size-3" />
-                    </a>
+                    </Link>
                   </div>
                 </div>
               </div>
@@ -429,19 +459,103 @@ export function Navbar() {
             <span>Marketplace</span>
           </a>
 
-          {/* Login Button (Linked to /login with gold accent when active) */}
-          <Link
-            href="/login"
-            className={cn(
-              "inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs xl:text-sm font-semibold transition-all whitespace-nowrap shadow-2xs cursor-pointer",
-              isLoginActive
-                ? "border-amber-500 bg-amber-500/20 text-amber-950 dark:border-amber-400 dark:bg-amber-500/25 dark:text-amber-200"
-                : "border-neutral-300 dark:border-white/20 bg-white/90 dark:bg-neutral-900/90 text-neutral-800 dark:text-neutral-200 hover:bg-neutral-100 hover:border-amber-500/40 dark:hover:bg-neutral-800 dark:hover:border-amber-400/30"
-            )}
-          >
-            <LogIn className="size-3.5 text-neutral-700 dark:text-neutral-300" />
-            <span>Login</span>
-          </Link>
+          {/* Authentication Section: Circular Profile Avatar (Logged In) or Login Button */}
+          {isAuthenticated ? (
+            <div className="relative" ref={profileDropdownRef}>
+              <button
+                type="button"
+                onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
+                className="relative flex items-center justify-center size-8 sm:size-8.5 rounded-full ring-2 ring-amber-500/70 hover:ring-amber-500 dark:ring-amber-400/80 transition-all shadow-xs cursor-pointer overflow-hidden bg-gradient-to-tr from-amber-500 to-orange-500 text-white font-bold text-xs focus:outline-none"
+                title={`${userName} (${userType}) - Click for options`}
+                aria-label="User Profile Menu"
+              >
+                {userImage ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={userImage}
+                    alt={userName}
+                    className="size-full object-cover rounded-full"
+                  />
+                ) : (
+                  <span>{userInitial}</span>
+                )}
+                <span className="absolute bottom-0 right-0 block size-2 rounded-full ring-1 ring-white dark:ring-neutral-900 bg-emerald-500" />
+              </button>
+
+              {/* Minimal Profile Dropdown Menu */}
+              {profileDropdownOpen && (
+                <div className="absolute right-0 mt-2 w-56 rounded-2xl border border-neutral-200/90 dark:border-white/10 bg-white/95 dark:bg-[#141416]/95 backdrop-blur-xl p-3 shadow-xl z-50 animate-in fade-in zoom-in-95 duration-150">
+                  <div className="flex items-center gap-2.5 pb-2.5 mb-2 border-b border-neutral-200/80 dark:border-white/10">
+                    <div className="size-8 rounded-full bg-gradient-to-tr from-amber-500 to-orange-500 flex items-center justify-center text-white font-bold text-xs shrink-0 overflow-hidden">
+                      {userImage ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={userImage} alt={userName} className="size-full object-cover" />
+                      ) : (
+                        <span>{userInitial}</span>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-bold text-neutral-900 dark:text-white truncate">
+                        {userName}
+                      </p>
+                      <p className="text-[11px] text-neutral-500 dark:text-neutral-400 truncate">
+                        {currentUser?.email}
+                      </p>
+                      <span
+                        className={`inline-block mt-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                          userType === "admin"
+                            ? "bg-red-500/10 text-red-600 dark:text-red-400"
+                            : "bg-amber-500/10 text-amber-700 dark:text-amber-400"
+                        }`}
+                      >
+                        {userType}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-1">
+                    <Link
+                      href={dashboardLink}
+                      onClick={() => setProfileDropdownOpen(false)}
+                      className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-neutral-700 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition"
+                    >
+                      <ShieldCheck className="size-3.5 text-amber-600 dark:text-amber-400" />
+                      <span>{userType === "admin" ? "Admin Dashboard" : "User Dashboard"}</span>
+                    </Link>
+
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        setProfileDropdownOpen(false);
+                        if (typeof window !== "undefined") {
+                          localStorage.removeItem("ivalue_auth_token");
+                          localStorage.removeItem("ivalue_auth_user");
+                        }
+                        await signOut({ callbackUrl: "/login" });
+                      }}
+                      className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition cursor-pointer text-left w-full"
+                    >
+                      <LogOut className="size-3.5" />
+                      <span>Sign Out</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <Link
+              href="/login"
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs xl:text-sm font-semibold transition-all whitespace-nowrap shadow-2xs cursor-pointer",
+                isLoginActive
+                  ? "border-amber-500 bg-amber-500/20 text-amber-950 dark:border-amber-400 dark:bg-amber-500/25 dark:text-amber-200"
+                  : "border-neutral-300 dark:border-white/20 bg-white/90 dark:bg-neutral-900/90 text-neutral-800 dark:text-neutral-200 hover:bg-neutral-100 hover:border-amber-500/40 dark:hover:bg-neutral-800 dark:hover:border-amber-400/30"
+              )}
+            >
+              <LogIn className="size-3.5 text-neutral-700 dark:text-neutral-300" />
+              <span>Login</span>
+            </Link>
+          )}
         </div>
 
         {/* Mobile menu toggle */}
@@ -465,7 +579,7 @@ export function Navbar() {
       {mobileMenuOpen && (
         <div className="border-b border-neutral-200 bg-white/98 px-6 py-6 backdrop-blur-xl dark:border-white/10 dark:bg-neutral-950/98 lg:hidden animate-in slide-in-from-top-4 max-h-[85vh] overflow-y-auto">
           <nav className="flex flex-col gap-2">
-            <a
+            <Link
               href="/"
               onClick={() => setMobileMenuOpen(false)}
               className={cn(
@@ -476,9 +590,9 @@ export function Navbar() {
               )}
             >
               Home
-            </a>
+            </Link>
 
-            <a
+            <Link
               href="/oem"
               onClick={() => setMobileMenuOpen(false)}
               className={cn(
@@ -489,7 +603,7 @@ export function Navbar() {
               )}
             >
               OEM
-            </a>
+            </Link>
 
             <Link
               href="/customer"
@@ -645,19 +759,59 @@ export function Navbar() {
                 <ShoppingBag className="size-4 text-amber-600 dark:text-amber-400" />
                 <span>Marketplace</span>
               </a>
-              <Link
-                href="/login"
-                onClick={() => setMobileMenuOpen(false)}
-                className={cn(
-                  "flex items-center justify-center gap-2 rounded-lg border py-2.5 text-center text-xs font-semibold shadow-2xs transition-all",
-                  isLoginActive
-                    ? "border-amber-500 bg-amber-500/15 text-amber-900 dark:border-amber-400 dark:bg-amber-500/20 dark:text-amber-300"
-                    : "border-neutral-300 dark:border-white/20 bg-white dark:bg-neutral-900 text-neutral-800 dark:text-neutral-200"
-                )}
-              >
-                <LogIn className="size-4" />
-                <span>Login</span>
-              </Link>
+              {isAuthenticated ? (
+                <div className="flex flex-col gap-2 pt-2 border-t border-neutral-200/80 dark:border-white/10 mt-1">
+                  <Link
+                    href={dashboardLink}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center gap-3 rounded-xl border border-amber-500/40 bg-amber-500/10 p-2.5 text-xs font-semibold text-neutral-900 dark:text-white"
+                  >
+                    <div className="size-8 rounded-full bg-gradient-to-tr from-amber-500 to-orange-500 flex items-center justify-center text-white font-bold text-xs overflow-hidden shrink-0">
+                      {userImage ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={userImage} alt={userName} className="size-full object-cover" />
+                      ) : (
+                        <span>{userInitial}</span>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0 text-left">
+                      <p className="truncate font-bold text-neutral-900 dark:text-white">{userName}</p>
+                      <p className="text-[10px] text-amber-700 dark:text-amber-400 capitalize">{userType} Dashboard</p>
+                    </div>
+                    <ChevronRight className="size-4 text-amber-600 dark:text-amber-400" />
+                  </Link>
+
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      setMobileMenuOpen(false);
+                      if (typeof window !== "undefined") {
+                        localStorage.removeItem("ivalue_auth_token");
+                        localStorage.removeItem("ivalue_auth_user");
+                      }
+                      await signOut({ callbackUrl: "/login" });
+                    }}
+                    className="flex items-center justify-center gap-2 rounded-xl border border-red-500/30 bg-red-50/60 dark:bg-red-500/10 py-2.5 text-center text-xs font-semibold text-red-600 dark:text-red-400 cursor-pointer"
+                  >
+                    <LogOut className="size-3.5" />
+                    <span>Sign Out</span>
+                  </button>
+                </div>
+              ) : (
+                <Link
+                  href="/login"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={cn(
+                    "flex items-center justify-center gap-2 rounded-lg border py-2.5 text-center text-xs font-semibold shadow-2xs transition-all",
+                    isLoginActive
+                      ? "border-amber-500 bg-amber-500/15 text-amber-900 dark:border-amber-400 dark:bg-amber-500/20 dark:text-amber-300"
+                      : "border-neutral-300 dark:border-white/20 bg-white dark:bg-neutral-900 text-neutral-800 dark:text-neutral-200"
+                  )}
+                >
+                  <LogIn className="size-4" />
+                  <span>Login</span>
+                </Link>
+              )}
             </div>
           </nav>
         </div>

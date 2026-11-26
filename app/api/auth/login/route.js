@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import prisma from "@/lib/prisma";
 
 export async function POST(request) {
   try {
@@ -51,13 +52,42 @@ export async function POST(request) {
       id: `usr_gcp_${Math.random().toString(36).substring(2, 9)}`,
       email: cleanEmail,
       name: formattedName || "iValue User",
-      role: isDemoUser ? "CoE Administrator" : "Enterprise Architect",
-      provider: "ivalue_gcp_database",
+      role: isDemoUser ? "admin" : "user",
+      provider: "credentials",
       authenticatedAt: new Date().toISOString()
     };
 
     // Return session token and profile
     const token = `iv_token_${Buffer.from(JSON.stringify(userProfile)).toString("base64")}`;
+
+    // Synchronize login into userlist table
+    try {
+      const expiryDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+        .toISOString()
+        .split("T")[0];
+
+      const existingRows = await prisma.$queryRaw`
+        SELECT id, userType FROM userlist WHERE email = ${cleanEmail} LIMIT 1
+      `;
+
+      const targetUserType = isDemoUser ? "admin" : "user";
+
+      if (!existingRows || existingRows.length === 0) {
+        await prisma.$executeRaw`
+          INSERT INTO userlist (email, name, userType, provider, profileImage, accessToken, accessTillDate)
+          VALUES (${cleanEmail}, ${formattedName || "iValue User"}, ${targetUserType}, 'credentials', '', ${token}, ${expiryDate})
+        `;
+      } else {
+        const currentUserType = existingRows[0]?.userType || targetUserType;
+        await prisma.$executeRaw`
+          UPDATE userlist
+          SET name = ${formattedName || "iValue User"}, userType = ${currentUserType}, provider = 'credentials', accessToken = ${token}
+          WHERE email = ${cleanEmail}
+        `;
+      }
+    } catch (dbErr) {
+      console.warn("Could not sync credentials user to userlist:", dbErr.message);
+    }
 
     const response = NextResponse.json(
       {
