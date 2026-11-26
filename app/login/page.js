@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { signIn, useSession } from "next-auth/react";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
 import { CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
@@ -11,113 +12,162 @@ function LoginForm() {
   const searchParams = useSearchParams();
   const returnUrl = searchParams.get("returnUrl") || "/";
 
+  // NextAuth active session check
+  const { data: session, status } = useSession();
+
   // Track active authentication provider
   const [loadingProvider, setLoadingProvider] = useState(null);
-  const [errorMsg, setErrorMsg] = useState("");
-  const [successMsg, setSuccessMsg] = useState("");
+  const [actionErrorMsg, setActionErrorMsg] = useState("");
+  const [actionSuccessMsg, setActionSuccessMsg] = useState("");
 
-  // Check existing session
-  useEffect(() => {
-    try {
-      const storedToken = localStorage.getItem("ivalue_auth_token");
-      if (storedToken) {
-        const storedUser = localStorage.getItem("ivalue_auth_user");
-        if (storedUser) {
-          const user = JSON.parse(storedUser);
-          setSuccessMsg(`Already signed in as ${user.name || user.email}. Redirecting...`);
-          setTimeout(() => {
-            router.push(returnUrl);
-          }, 900);
-        }
-      }
-    } catch {
-      // Ignore localStorage errors
+  // Derive error message from query params if NextAuth redirected with error
+  const errorParam = searchParams.get("error");
+  let queryErrorMsg = "";
+  if (errorParam) {
+    if (errorParam === "OAuthSignin" || errorParam === "OAuthCallback") {
+      queryErrorMsg = "Google Sign-In was cancelled or failed to verify credentials.";
+    } else if (errorParam === "AccessDenied") {
+      queryErrorMsg = "Access denied. Please use an authorized Google account.";
+    } else if (errorParam === "Configuration") {
+      queryErrorMsg = "Google OAuth is not configured yet. Please check GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in .env.";
+    } else {
+      queryErrorMsg = `Authentication error (${errorParam}). Please try again.`;
     }
-  }, [router, returnUrl]);
+  }
+
+  const displayErrorMsg = actionErrorMsg || queryErrorMsg;
+  const displaySuccessMsg =
+    actionSuccessMsg ||
+    (status === "authenticated" && session?.user
+      ? `Signed in as ${session.user.name || session.user.email}. Redirecting...`
+      : "");
+
+  // Helper to determine destination based on userType/role
+  const getDestinationByRole = (roleOrType, targetReturnUrl) => {
+    const isAdmin = roleOrType === "admin";
+    if (!targetReturnUrl || targetReturnUrl === "/" || targetReturnUrl === "/login") {
+      return isAdmin ? "/dashboard/admin" : "/dashboard/user";
+    }
+    // Security check: non-admin attempting to access admin route is diverted to user dashboard
+    if (targetReturnUrl.startsWith("/dashboard/admin") && !isAdmin) {
+      return "/dashboard/user";
+    }
+    return targetReturnUrl;
+  };
+
+  // Sync NextAuth authenticated session to localStorage and handle role-based redirection
+  useEffect(() => {
+    if (status === "authenticated" && session?.user) {
+      try {
+        if (session.token) {
+          localStorage.setItem("ivalue_auth_token", session.token);
+        }
+        localStorage.setItem("ivalue_auth_user", JSON.stringify(session.user));
+      } catch {
+        // Ignore localStorage restrictions
+      }
+
+      const userType = session.user.userType || session.user.role || "user";
+      const targetDestination = getDestinationByRole(userType, returnUrl);
+
+      const timer = setTimeout(() => {
+        router.push(targetDestination);
+      }, 700);
+      return () => clearTimeout(timer);
+    }
+
+    // Check pre-existing token in localStorage if unauthenticated
+    if (status === "unauthenticated") {
+      try {
+        const storedToken = localStorage.getItem("ivalue_auth_token");
+        const storedUser = localStorage.getItem("ivalue_auth_user");
+        if (storedToken && storedUser) {
+          const parsed = JSON.parse(storedUser);
+          const userType = parsed.userType || parsed.role || "user";
+          const targetDestination = getDestinationByRole(userType, returnUrl);
+
+          const timer = setTimeout(() => {
+            router.push(targetDestination);
+          }, 800);
+          return () => clearTimeout(timer);
+        }
+      } catch {
+        // Ignore localStorage errors
+      }
+    }
+  }, [session, status, router, returnUrl]);
 
   // Handle Microsoft Sign-In (?provider=microsoft)
   const handleMicrosoftLogin = async (e) => {
     e.preventDefault();
     if (loadingProvider) return;
 
-    setErrorMsg("");
-    setSuccessMsg("");
+    setActionErrorMsg("");
+    setActionSuccessMsg("");
     setLoadingProvider("microsoft");
 
     try {
       const res = await fetch("/api/auth/microsoft", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ returnUrl })
+        body: JSON.stringify({ returnUrl }),
       });
 
       const data = await res.json();
 
       if (!res.ok || !data.success) {
-        setErrorMsg(data.message || "Failed to authenticate with Microsoft. Please try again.");
+        setActionErrorMsg(data.message || "Failed to authenticate with Microsoft. Please try again.");
         setLoadingProvider(null);
         return;
       }
 
-      setSuccessMsg("Microsoft Single Sign-On verified. Redirecting...");
+      setActionSuccessMsg("Microsoft Single Sign-On verified. Redirecting...");
 
       if (typeof window !== "undefined") {
         localStorage.setItem("ivalue_auth_token", data.token);
         localStorage.setItem("ivalue_auth_user", JSON.stringify(data.user));
       }
 
+      const userType = data.user.userType || data.user.role || "user";
+      const targetDestination = getDestinationByRole(userType, returnUrl);
+
       setTimeout(() => {
-        router.push(returnUrl);
+        router.push(targetDestination);
       }, 800);
     } catch (err) {
       console.error("Microsoft login error:", err);
-      setErrorMsg("Failed to initiate Microsoft Single Sign-On. Please try again.");
+      setActionErrorMsg("Failed to initiate Microsoft Single Sign-On. Please try again.");
       setLoadingProvider(null);
     }
   };
 
-  // Handle Google Sign-In (?provider=google)
+  // Handle Google Sign-In with NextAuth (OAuth 2.0 + JWT + Prisma MySQL DB)
   const handleGoogleLogin = async (e) => {
     e.preventDefault();
     if (loadingProvider) return;
 
-    setErrorMsg("");
-    setSuccessMsg("");
+    setActionErrorMsg("");
+    setActionSuccessMsg("");
     setLoadingProvider("google");
 
     try {
-      const res = await fetch("/api/auth/google", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ returnUrl })
+      // Role-aware callbackUrl: /dashboard routes admin to /dashboard/admin and user to /dashboard/user
+      const callbackTarget =
+        !returnUrl || returnUrl === "/" || returnUrl === "/login"
+          ? "/dashboard"
+          : returnUrl;
+
+      await signIn("google", {
+        callbackUrl: callbackTarget,
       });
-
-      const data = await res.json();
-
-      if (!res.ok || !data.success) {
-        setErrorMsg(data.message || "Failed to authenticate with Google. Please try again.");
-        setLoadingProvider(null);
-        return;
-      }
-
-      setSuccessMsg("Google Single Sign-On verified. Redirecting...");
-
-      if (typeof window !== "undefined") {
-        localStorage.setItem("ivalue_auth_token", data.token);
-        localStorage.setItem("ivalue_auth_user", JSON.stringify(data.user));
-      }
-
-      setTimeout(() => {
-        router.push(returnUrl);
-      }, 800);
     } catch (err) {
       console.error("Google login error:", err);
-      setErrorMsg("Failed to initiate Google Single Sign-On. Please try again.");
+      setActionErrorMsg("Failed to initiate Google Sign-In. Please check your credentials.");
       setLoadingProvider(null);
     }
   };
 
-  const isAnyLoading = loadingProvider !== null;
+  const isAnyLoading = loadingProvider !== null || status === "loading";
 
   return (
     <div className="relative min-h-screen flex flex-col bg-transparent text-foreground transition-colors duration-900 w-full overflow-x-hidden">
@@ -165,33 +215,34 @@ function LoginForm() {
               </p>
 
               {/* Feedback States */}
-              {errorMsg && !isAnyLoading && (
+              {displayErrorMsg && !isAnyLoading && (
                 <div className="mb-6 rounded-xl border border-red-200 dark:border-red-500/30 bg-red-50/80 dark:bg-red-500/10 p-3.5 flex items-start gap-2.5 text-xs text-red-700 dark:text-red-400 animate-in fade-in-50 duration-200">
                   <AlertCircle
                     className="w-4 h-4 min-w-[16px] min-h-[16px] text-red-600 dark:text-red-400 shrink-0 mt-0.5"
                     style={{ width: "16px", height: "16px" }}
                   />
-                  <span className="leading-snug">{errorMsg}</span>
+                  <span className="leading-snug">{displayErrorMsg}</span>
                 </div>
               )}
 
-              {successMsg && !isAnyLoading && (
+              {displaySuccessMsg && !isAnyLoading && (
                 <div className="mb-6 rounded-xl border border-emerald-200 dark:border-emerald-500/30 bg-emerald-50/80 dark:bg-emerald-500/10 p-3.5 flex items-start gap-2.5 text-xs text-emerald-800 dark:text-emerald-300 animate-in fade-in-50 duration-200">
                   <CheckCircle2
                     className="w-4 h-4 min-w-[16px] min-h-[16px] text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5"
                     style={{ width: "16px", height: "16px" }}
                   />
-                  <span className="leading-snug font-medium">{successMsg}</span>
+                  <span className="leading-snug font-medium">{displaySuccessMsg}</span>
                 </div>
               )}
 
-              {/* Exact Login Options Container from MAIN site */}
+              {/* Login Options Container */}
               <div className="flex flex-col gap-3">
                 
                 {/* Microsoft Login Button */}
-                <a
-                  href="?provider=microsoft"
+                <button
+                  type="button"
                   onClick={handleMicrosoftLogin}
+                  disabled={isAnyLoading}
                   aria-disabled={isAnyLoading}
                   className={`h-11 sm:h-12 w-full inline-flex items-center justify-center gap-3 px-4 py-2.5 rounded-xl border text-sm font-medium tracking-wide transition-all duration-200 cursor-pointer no-underline overflow-hidden select-none ${
                     loadingProvider === "microsoft"
@@ -211,7 +262,7 @@ function LoginForm() {
                     </>
                   ) : (
                     <>
-                      {/* Microsoft 4-Color Icon - Strictly Constrained */}
+                      {/* Microsoft 4-Color Icon */}
                       <span
                         className="login-btn-icon inline-flex items-center justify-center shrink-0"
                         style={{ width: "18px", height: "18px", minWidth: "18px", minHeight: "18px", maxWidth: "18px", maxHeight: "18px" }}
@@ -233,12 +284,13 @@ function LoginForm() {
                       <span className="truncate whitespace-nowrap">Sign in with Microsoft</span>
                     </>
                   )}
-                </a>
+                </button>
 
-                {/* Google Login Button */}
-                <a
-                  href="?provider=google"
+                {/* Google Login Button (NextAuth Google Provider) */}
+                <button
+                  type="button"
                   onClick={handleGoogleLogin}
+                  disabled={isAnyLoading}
                   aria-disabled={isAnyLoading}
                   className={`h-11 sm:h-12 w-full inline-flex items-center justify-center gap-3 px-4 py-2.5 rounded-xl border text-sm font-medium tracking-wide transition-all duration-200 cursor-pointer no-underline overflow-hidden select-none ${
                     loadingProvider === "google"
@@ -258,7 +310,7 @@ function LoginForm() {
                     </>
                   ) : (
                     <>
-                      {/* Official Google 4-Color Icon - Strictly Constrained */}
+                      {/* Official Google 4-Color Icon */}
                       <span
                         className="login-btn-icon inline-flex items-center justify-center shrink-0"
                         style={{ width: "18px", height: "18px", minWidth: "18px", minHeight: "18px", maxWidth: "18px", maxHeight: "18px" }}
@@ -291,7 +343,7 @@ function LoginForm() {
                       <span className="truncate whitespace-nowrap">Sign in with Google</span>
                     </>
                   )}
-                </a>
+                </button>
 
               </div>
 

@@ -1,0 +1,341 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model userlist {
+  id             Int    @id @default(autoincrement())
+  email          String @db.VarChar(255)
+  name           String @db.VarChar(255)
+  userType       String @db.VarChar(255)
+  provider       String @default("google") @db.VarChar(50)
+  profileImage   String @db.VarChar(255)
+  accessToken    String @db.VarChar(500)
+  accessTillDate String @db.VarChar(255)
+
+  @@map("userlist")
+}
+
+model approvedrequest {
+  id                       Int    @id @default(autoincrement())
+  requesteduserlistEmail   String @db.VarChar(255)
+  contentID                String @db.VarChar(255)
+  contentIdKey             String @db.VarChar(255)
+  orchestrationID          String @db.VarChar(500)
+  orchestrationVMGroupName String @db.VarChar(500)
+}
+
+model category {
+  id              Int    @id @default(autoincrement())
+  category        String @db.VarChar(255)
+  subCategory     String @db.VarChar(255)
+  subCategoryFull String @db.VarChar(255)
+}
+
+model cdnvideos {
+  id               Int      @id @default(autoincrement())
+  contentID        String   @db.VarChar(11)
+  contentIdKey     String   @db.VarChar(255)
+  cdnUrl           String   @db.VarChar(500)
+  createdAt        DateTime @default(now()) @db.Timestamp(0)
+  videoName        String   @db.VarChar(500)
+  videoDescription String   @db.VarChar(500)
+}
+
+model cloudconsoleuser {
+  id                Int       @id @default(autoincrement())
+  email             String    @unique(map: "email") @db.VarChar(255)
+  otp               String?   @db.VarChar(10)
+  is_verified       String?   @default("0") @db.VarChar(1)
+  password_hash     String?   @db.VarChar(255)
+  card_holder_name  String?   @db.VarChar(255)
+  card_last_four    String?   @db.Char(4)
+  card_expiry_month String?   @db.Char(2)
+  card_expiry_year  String?   @db.Char(4)
+  payment_status    String    @db.VarChar(50)
+  first_name        String?   @db.VarChar(100)
+  last_name         String?   @db.VarChar(100)
+  phone             String?   @db.VarChar(20)
+  organization_name String?   @db.VarChar(255)
+  created_at        DateTime? @default(now()) @db.Timestamp(0)
+  updated_at        DateTime? @default(now()) @db.Timestamp(0)
+}
+
+model content {
+  id                Int                   @id @default(autoincrement())
+  idKey             String                @db.VarChar(255)
+  oem               String                @db.VarChar(255)
+  oemImage          String                @db.VarChar(500)
+  head              String                @db.VarChar(500)
+  headDetails       String                @db.VarChar(1000)
+  overView          String                @db.VarChar(50000)
+  howToAccess       String                @db.VarChar(500)
+  supportContent    String                @db.VarChar(5000)
+  accessSteps       String?               @db.LongText
+  accessCredentials String?               @db.LongText
+  comingSoon        content_comingSoon    @default(No)
+  contentStatus     content_contentStatus @default(draft)
+}
+
+model contentcategory {
+  id           Int    @id @default(autoincrement())
+  contentID    String @db.VarChar(255)
+  contentIdKey String @db.VarChar(500)
+  category     String @db.VarChar(500)
+  subCategory  String @db.VarChar(500)
+}
+
+model contentplaybooks {
+  id           Int      @id @default(autoincrement())
+  contentID    String   @db.VarChar(255)
+  contentIdKey String   @db.VarChar(500)
+  fileName     String   @db.VarChar(500)
+  createdAt    DateTime @default(now()) @db.Timestamp(0)
+}
+
+model contentresources {
+  id           Int    @id @default(autoincrement())
+  contentID    String @db.VarChar(255)
+  contentIdKey String @db.VarChar(255)
+  fileName     String @db.VarChar(500)
+}
+
+model deletedrequesteduser {
+  id               Int       @id @default(autoincrement())
+  userName         String    @db.VarChar(255)
+  userEmail        String    @db.VarChar(255)
+  organizationName String    @db.VarChar(255)
+  countryName      String    @db.VarChar(225)
+  timezone         String    @db.VarChar(225)
+  comments         String    @db.VarChar(2000)
+  contentID        String    @db.VarChar(255)
+  contentIdKey     String    @db.VarChar(255)
+  requestedDate    String    @db.VarChar(255)
+  startDate        String    @db.VarChar(255)
+  endDate          String    @db.VarChar(255)
+  userAccessKeys   String    @db.VarChar(500)
+  otp              String    @db.VarChar(255)
+  otpTime          String    @db.VarChar(255)
+  status           String    @db.VarChar(255)
+  adminComment     String    @db.VarChar(5000)
+  deletedAt        DateTime? @db.DateTime(0)
+  deletedBy        String?   @db.VarChar(255)
+}
+
+model knowledge_documents {
+  id          Int                         @id @default(autoincrement())
+  file_name   String                      @db.VarChar(255)
+  object_name String                      @db.VarChar(500)
+  mime_type   String?                     @db.VarChar(150)
+  file_size   BigInt
+  status      knowledge_documents_status? @default(Pending)
+  uploaded_by String                      @db.VarChar(255)
+  created_at  DateTime?                   @default(now()) @db.DateTime(0)
+}
+
+model oem {
+  id      Int    @id @default(autoincrement())
+  oemName String @db.VarChar(255)
+  logo    String @db.VarChar(255)
+}
+
+model orchestration {
+  id                       Int    @id @default(autoincrement())
+  contentID                String @db.VarChar(255)
+  contentIdKey             String @db.VarChar(255)
+  orchestration            String @db.VarChar(255)
+  orchestrationVMGroupName String @db.VarChar(500)
+}
+
+model orchestrationvmgroup {
+  id                       Int    @id @default(autoincrement())
+  orchestrationID          String @db.VarChar(255)
+  orchestrationVMGroupName String @db.VarChar(255)
+  vmID                     String @db.VarChar(500)
+  comments                 String @db.VarChar(5000)
+}
+
+model product_access {
+  id           Int                         @id @default(autoincrement())
+  userId       Int
+  contentId    Int
+  accessStatus product_access_accessStatus @default(active)
+  grantedBy    Int?
+  grantedDate  DateTime                    @default(now()) @db.DateTime(0)
+  expiryDate   DateTime?                   @db.Date
+  createdDate  DateTime                    @default(now()) @db.DateTime(0)
+  updatedDate  DateTime                    @default(now()) @db.DateTime(0)
+
+  @@unique([userId, contentId], map: "unique_user_content")
+  @@index([accessStatus], map: "idx_accessStatus")
+  @@index([contentId], map: "idx_contentId")
+  @@index([userId], map: "idx_userId")
+}
+
+model publicfile {
+  id           Int    @id @default(autoincrement())
+  fileName     String @db.VarChar(500)
+  contentID    String @db.VarChar(255)
+  contentIdKey String @db.VarChar(255)
+}
+
+model requesteduserlist {
+  id               Int    @id @default(autoincrement())
+  userName         String @db.VarChar(255)
+  userEmail        String @db.VarChar(255)
+  organizationName String @db.VarChar(255)
+  countryName      String @db.VarChar(225)
+  timezone         String @db.VarChar(225)
+  comments         String @db.VarChar(2000)
+  contentID        String @db.VarChar(255)
+  contentIdKey     String @db.VarChar(255)
+  requestedDate    String @db.VarChar(255)
+  startDate        String @db.VarChar(255)
+  endDate          String @db.VarChar(255)
+  userAccessKeys   String @db.VarChar(500)
+  otp              String @db.VarChar(255)
+  otpTime          String @db.VarChar(255)
+  status           String @db.VarChar(255)
+  adminComment     String @db.VarChar(5000)
+}
+
+model rssfeeds {
+  id    Int    @id @default(autoincrement())
+  oem   String @db.VarChar(255)
+  image String @db.VarChar(500)
+  head  String @db.VarChar(500)
+  url   String @db.VarChar(500)
+}
+
+model user_content_access {
+  id          Int                        @id @default(autoincrement())
+  userId      Int
+  contentId   Int
+  idKey       String                     @db.VarChar(255)
+  status      user_content_access_status @default(active)
+  grantedBy   Int
+  grantedDate DateTime                   @default(now()) @db.DateTime(0)
+  updatedDate DateTime                   @default(now()) @db.DateTime(0)
+
+  @@unique([userId, contentId], map: "unique_user_content")
+  @@index([contentId], map: "idx_contentId")
+  @@index([idKey], map: "idx_idKey")
+  @@index([status], map: "idx_status")
+  @@index([userId], map: "idx_userId")
+}
+
+model visitorlogs {
+  id             Int      @id @default(autoincrement())
+  contentId      String   @db.VarChar(255)
+  contentKey     String   @db.VarChar(255)
+  UserOS         String   @db.VarChar(255)
+  UserBrowser    String   @db.VarChar(255)
+  UserIP         String   @db.VarChar(255)
+  UserCity       String   @db.VarChar(255)
+  UserRegionName String   @db.VarChar(255)
+  UserCountry    String   @db.VarChar(255)
+  UserDevice     String   @db.VarChar(255)
+  time           DateTime @default(now()) @db.DateTime(0)
+}
+
+model ytvideos {
+  id           Int     @id @default(autoincrement())
+  contentID    String  @db.VarChar(255)
+  contentIdKey String  @db.VarChar(255)
+  ytCode       String  @db.VarChar(255)
+  ytType       String? @default("single") @db.VarChar(20)
+}
+
+enum product_access_accessStatus {
+  active
+  revoked
+}
+
+enum user_content_access_status {
+  active
+  revoked
+}
+
+enum knowledge_documents_status {
+  Pending
+  Processing
+  Completed
+  Failed
+}
+
+enum content_comingSoon {
+  Yes
+  No
+}
+
+enum content_contentStatus {
+  draft
+  private
+  published
+}
+
+// ==========================================
+// NEXTAUTH & JWT SESSION MODELS
+// ==========================================
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime? @map("email_verified")
+  image         String?   @db.Text
+  role          String?   @default("user")
+  provider      String?   @default("google")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  accounts      Account[]
+  sessions      Session[]
+
+  @@map("users")
+}
+
+model Account {
+  id                 String  @id @default(cuid())
+  userId             String  @map("user_id")
+  type               String
+  provider           String
+  providerAccountId  String  @map("provider_account_id")
+  refresh_token      String? @db.Text
+  access_token       String? @db.Text
+  expires_at         Int?
+  token_type         String?
+  scope              String?
+  id_token           String? @db.Text
+  session_state      String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique @map("session_token")
+  userId       String   @map("user_id")
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
