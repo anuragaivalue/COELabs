@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useMemo, Suspense } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { Navbar } from "@/components/layout/navbar";
@@ -48,7 +48,9 @@ export default function MultiplierDetailPage() {
           </div>
 
           {/* Multiplier Interactive View */}
-          <MultiplierView data={multiplierData} />
+          <Suspense fallback={<div className="w-full h-96 flex items-center justify-center text-sm text-neutral-500">Loading multiplier...</div>}>
+            <MultiplierView key={multiplierData?.slug} data={multiplierData} />
+          </Suspense>
 
         </div>
       </main>

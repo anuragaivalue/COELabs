@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
+import Link from "next/link";
 import { audienceBenefits } from "@/data/benefits";
 import { CheckCircle2, ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 import { IValueEmblem } from "@/components/ui/ivalue-logo";
@@ -209,14 +210,40 @@ export function AudienceBenefits() {
                         ))}
                       </div>
 
-                      {/* CTA Routing to Dedicated Architecture Request Page */}
-                      <div className="mt-8 flex items-center justify-start border-t border-neutral-100 pt-6 dark:border-white/5">
-                        <a
-                          href="/request-poc"
-                          className="inline-flex items-center gap-2 rounded-xl bg-neutral-900 px-6 py-3 text-xs font-display font-semibold text-white hover:bg-black dark:bg-white dark:text-black dark:hover:bg-neutral-200 shadow-sm transition-all"
-                        >
-                          Request Architecture Blueprint <ArrowRight className="size-3.5" />
-                        </a>
+                      {/* Card Action Footer */}
+                      <div className="mt-8 flex flex-wrap items-center gap-3 border-t border-neutral-100 pt-6 dark:border-white/5">
+                        {aud.id === "enterprises" && (
+                          <Link
+                            href="/about-us"
+                            className="inline-flex items-center gap-2 rounded-xl bg-neutral-900 px-6 py-3 text-xs font-display font-semibold text-white hover:bg-black dark:bg-white dark:text-black dark:hover:bg-neutral-200 shadow-sm transition-all"
+                          >
+                            Learn More <ArrowRight className="size-3.5" />
+                          </Link>
+                        )}
+                        {aud.id === "partners" && (
+                          <Link
+                            href="/partners"
+                            className="inline-flex items-center gap-2 rounded-xl bg-neutral-900 px-6 py-3 text-xs font-display font-semibold text-white hover:bg-black dark:bg-white dark:text-black dark:hover:bg-neutral-200 shadow-sm transition-all"
+                          >
+                            Explore Our Partners <ArrowRight className="size-3.5" />
+                          </Link>
+                        )}
+                        {aud.id === "oems" && (
+                          <>
+                            <Link
+                              href="/oem"
+                              className="inline-flex items-center gap-2 rounded-xl bg-neutral-900 px-6 py-3 text-xs font-display font-semibold text-white hover:bg-black dark:bg-white dark:text-black dark:hover:bg-neutral-200 shadow-sm transition-all"
+                            >
+                              Explore Our OEM&apos;s <ArrowRight className="size-3.5" />
+                            </Link>
+                            <Link
+                              href="/portal/marketplace"
+                              className="inline-flex items-center gap-2 rounded-xl border border-neutral-300 bg-transparent px-5 py-3 text-xs font-display font-semibold text-neutral-800 hover:bg-neutral-100 hover:text-neutral-900 dark:border-white/20 dark:text-neutral-200 dark:hover:bg-neutral-800 dark:hover:text-white shadow-sm transition-all"
+                            >
+                              Explore Marketplace <ArrowRight className="size-3.5" />
+                            </Link>
+                          </>
+                        )}
                       </div>
                     </div>
 

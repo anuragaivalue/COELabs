@@ -4,6 +4,7 @@ import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
 import { IValueEmblem } from "@/components/ui/ivalue-logo";
 import { Card, CardTitle, CardDescription } from "@/components/ui/card";
+import { PartnerRegistrationForm } from "@/components/partners/partner-registration-form";
 import { partnersData } from "@/data/partners";
 import {
   TrendingUp,
@@ -19,7 +20,8 @@ import {
   Calendar,
   Sparkles,
   ChevronLeft,
-  Briefcase
+  Briefcase,
+  Handshake
 } from "lucide-react";
 
 export const metadata = {
@@ -532,13 +534,13 @@ export default function PartnersPage() {
               </div>
 
               <div className="mt-10 flex flex-wrap justify-center items-center gap-4">
-                <Link
-                  href="/contact"
+                <a
+                  href="#partner-registration"
                   className="inline-flex items-center gap-2 rounded-xl bg-neutral-900 px-6 py-3.5 text-sm font-bold text-white shadow-md hover:bg-black dark:bg-white dark:text-black dark:hover:bg-neutral-100 transition-all cursor-pointer"
                 >
-                  <Calendar className="size-4" />
-                  <span>Schedule Partner CoE Tour</span>
-                </Link>
+                  <Handshake className="size-4" />
+                  <span>Register as iValue Partner</span>
+                </a>
                 <Link
                   href="/contact"
                   className="inline-flex items-center gap-2 rounded-xl border border-neutral-300/90 bg-white px-6 py-3.5 text-sm font-bold text-neutral-800 hover:border-amber-500/50 hover:bg-neutral-50 dark:border-white/15 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700 transition-all cursor-pointer"
@@ -548,6 +550,24 @@ export default function PartnersPage() {
                 </Link>
               </div>
             </div>
+          </section>
+
+          {/* Section 11: Enterprise Partner Registration System */}
+          <section id="partner-registration" className="mt-16 sm:mt-24 mb-16 scroll-mt-24">
+            <div className="text-center max-w-2xl mx-auto mb-8">
+              <div className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-3.5 py-1 text-xs font-semibold text-amber-800 dark:border-orange-500/30 dark:bg-orange-500/15 dark:text-orange-300">
+                <Handshake className="size-3.5 text-amber-600 dark:text-orange-400" />
+                <span>Ecosystem Onboarding</span>
+              </div>
+              <h2 className="mt-3 font-sans text-2xl sm:text-3xl font-bold tracking-tight text-neutral-900 dark:text-white">
+                Register as an Authorized iValue CoE Partner
+              </h2>
+              <p className="mt-2 text-xs sm:text-sm text-neutral-600 dark:text-neutral-400 leading-relaxed font-sans">
+                Complete your partner registration below to access multi-vendor CoE lab testbeds, joint GTM enablement, and validated pre-sales solution blueprints.
+              </p>
+            </div>
+
+            <PartnerRegistrationForm />
           </section>
 
         </div>

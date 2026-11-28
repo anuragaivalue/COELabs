@@ -103,5 +103,37 @@ export const oemPartners = [
     logo: "https://cdn.ivaluetv.com/oem/Chronicle-RGB-Horz-Color.webp",
     url: "https://coe.ivaluegroup.com/oem/Chronicle",
     description: "Petabyte-scale security telemetry search, threat detection, and automated investigation."
+  },
+  {
+    name: "Datadog",
+    category: "Cloud Observability & Security",
+    logo: "/assets/img/oems/datadog.svg",
+    logoDark: "/assets/img/oems/datadog-dark.svg",
+    url: "https://coe.ivaluegroup.com/oem/datadog",
+    description: "Cloud infrastructure monitoring, APM, and unified security telemetry for modern hybrid workloads."
+  },
+  {
+    name: "EDB",
+    category: "Enterprise Database",
+    logo: "/assets/img/oems/edb.svg",
+    logoDark: "/assets/img/oems/edb-dark.svg",
+    url: "https://coe.ivaluegroup.com/oem/edb",
+    description: "Enterprise PostgreSQL database high-availability, mission-critical security, and hybrid cloud deployment."
+  },
+  {
+    name: "Gambit Cyber",
+    category: "Threat Management & Adversary Defense",
+    logo: "/assets/img/oems/gambit-cyber.svg",
+    logoDark: "/assets/img/oems/gambit-cyber-dark.svg",
+    url: "https://coe.ivaluegroup.com/oem/gambit",
+    description: "Proactive adversary emulation, continuous attack surface reduction, and cyber threat telemetry."
+  },
+  {
+    name: "Virtuozzo",
+    category: "Hybrid Cloud Infrastructure",
+    logo: "/assets/img/oems/virtuozzo.svg",
+    logoDark: "/assets/img/oems/virtuozzo-dark.svg",
+    url: "https://coe.ivaluegroup.com/oem/virtuozzo",
+    description: "High-density cloud virtualization, hyperconverged compute, and software-defined storage."
   }
 ];

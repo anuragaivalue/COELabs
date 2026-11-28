@@ -1,10 +1,13 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useCallback, Suspense } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
 import { CalculatorNav } from "@/components/calculators/calculator-nav";
+import { formatCurrency as formatCurrencyUtil, getCurrencySymbol } from "@/lib/currency";
+import { exportSectionsToCSV, triggerPrint } from "@/lib/export-utils";
 import {
   LuKeyRound,
   LuRotateCcw,
@@ -17,7 +20,7 @@ import {
   LuLightbulb,
   LuDollarSign,
   LuPieChart,
-  LuBarChart3,
+  LuChartBar,
   LuLayers,
   LuShieldCheck,
   LuSparkles,
@@ -26,9 +29,11 @@ import {
   LuReceipt,
   LuBoxes,
   LuSlidersHorizontal,
+  LuBot,
+  LuFileSpreadsheet
 } from "react-icons/lu";
 
-const IDAM_STORAGE_KEY = "idam_roi_inputs_v1";
+const IDAM_STORAGE_KEY = "idam_roi_inputs_v2";
 
 const SCENARIOS = {
   cons: { label: "Conservative", mult: 0.75 },
@@ -45,13 +50,19 @@ const IDAM_DEFAULTS = {
   minsPerRequestNew: 10,
   opsHourly: 85,
 
-  // Category 2: Passwords & Audit (Current)
+  // Category 2: Non-Human Identities (NHI) & Machine Secrets (NEW!)
+  nhiServiceAccounts: 1200,
+  nhiApiKeys: 3500,
+  nhiRiskLossAnnual: 220000,
+  nhiGovernanceReductionPct: 65,
+
+  // Category 3: Passwords & Audit (Current)
   pwdResetsMonth: 900,
   pwdResetCost: 22,
   auditHoursMonth: 80,
   auditHourly: 95,
 
-  // Category 3: IDAM Solution Investment
+  // Category 4: IDAM Solution Investment
   licenseAnnual: 210000,
   implOneTime: 380000,
   trainingOneTime: 55000,
@@ -59,7 +70,7 @@ const IDAM_DEFAULTS = {
   fteCost: 135000,
   supportAnnual: 45000,
 
-  // Category 4: Business Impact Drivers
+  // Category 5: Business Impact Drivers
   pwdReductionPct: 35,
   auditReductionPct: 30,
   riskLossAnnual: 250000,
@@ -73,29 +84,49 @@ function clamp(n, min, max) {
   return Math.max(min, Math.min(max, n));
 }
 
-function formatUSD(val) {
-  if (!Number.isFinite(val)) return "$0";
-  const sign = val < 0 ? "-" : "";
-  const abs = Math.abs(val);
-  return `${sign}$${abs.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
+function formatPercent(val) {
+  if (!Number.isFinite(val)) return "–";
+  return `${(val * 100).toFixed(1)}%`;
 }
 
-export default function IdamCalculatorPage() {
-  const [inputs, setInputs] = useState(IDAM_DEFAULTS);
+function IdamCalculatorContent() {
+  const searchParams = useSearchParams();
+  const investmentParam = searchParams?.get("investment");
+  const currencyParam = searchParams?.get("currency");
+
+  // Initialize state cleanly avoiding setState in useEffect
+  const [inputs, setInputs] = useState(() => {
+    let base = { ...IDAM_DEFAULTS };
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem(IDAM_STORAGE_KEY);
+        if (saved) {
+          base = { ...base, ...JSON.parse(saved) };
+        }
+      } catch (_) {}
+    }
+    if (investmentParam) {
+      const parsed = parseFloat(investmentParam);
+      if (!isNaN(parsed) && parsed > 0) {
+        base.licenseAnnual = parsed < 10000 ? parsed * 1000 : parsed;
+      }
+    }
+    return base;
+  });
+
   const [selectedScenario, setSelectedScenario] = useState("exp");
   const [horizonYears, setHorizonYears] = useState(3);
+  const [currency, setCurrency] = useState(() =>
+    currencyParam?.toUpperCase() === "INR" ? "INR" : "USD"
+  );
   const [saveToast, setSaveToast] = useState(false);
 
-  // Load saved inputs on mount if present
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(IDAM_STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        setInputs((prev) => ({ ...prev, ...parsed }));
-      }
-    } catch (_) {}
-  }, []);
+  const formatMoney = useCallback(
+    (val, compact = false) => {
+      return formatCurrencyUtil(val, currency, compact);
+    },
+    [currency]
+  );
 
   const handleInputChange = (field, val) => {
     const num = parseFloat(val);
@@ -123,10 +154,10 @@ export default function IdamCalculatorPage() {
   };
 
   const handlePrint = () => {
-    window.print();
+    triggerPrint();
   };
 
-  // Exact IDAM mathematical model from MAIN counterpart
+  // IDAM mathematical model with NHI governance integration
   const model = useMemo(() => {
     const scn = SCENARIOS[selectedScenario] || SCENARIOS.exp;
     const mult = scn.mult;
@@ -146,6 +177,7 @@ export default function IdamCalculatorPage() {
     const pwdReduction = clamp((inputs.pwdReductionPct / 100) * mult, 0, 1);
     const auditReduction = clamp((inputs.auditReductionPct / 100) * mult, 0, 1);
     const riskReduction = clamp((inputs.riskReductionPct / 100) * mult, 0, 1);
+    const nhiGovernanceReduction = clamp((inputs.nhiGovernanceReductionPct / 100) * mult, 0, 1);
 
     const withPwd = baselinePwd * (1 - pwdReduction);
     const withAudit = baselineAudit * (1 - auditReduction);
@@ -157,22 +189,25 @@ export default function IdamCalculatorPage() {
     const riskBenefitAnnual = inputs.riskLossAnnual * riskReduction;
     const prodBenefitAnnual = (inputs.employees * inputs.prodHoursPerUser) * inputs.prodHourly * mult;
 
+    // NHI Non-Human Identities annual security benefit
+    const nhiBenefitAnnual = inputs.nhiRiskLossAnnual * nhiGovernanceReduction;
+
     // Annual net cashflow (savings + added benefits)
     const annualSavings = baselineAnnual - solutionOpexAnnual;
-    const annualBenefitsTotal = Math.max(0, annualSavings) + riskBenefitAnnual + prodBenefitAnnual;
+    const annualBenefitsTotal = Math.max(0, annualSavings) + riskBenefitAnnual + prodBenefitAnnual + nhiBenefitAnnual;
 
     // Total model over horizon
     const oneTime = inputs.implOneTime + inputs.trainingOneTime;
     const totalSolutionCost = oneTime + (solutionOpexAnnual * years);
     const totalBaselineCost = baselineAnnual * years;
 
-    const totalAdditionalBenefits = (riskBenefitAnnual + prodBenefitAnnual) * years;
+    const totalAdditionalBenefits = (riskBenefitAnnual + prodBenefitAnnual + nhiBenefitAnnual) * years;
     const netBenefit = (totalBaselineCost - totalSolutionCost) + totalAdditionalBenefits;
 
     const roi = totalSolutionCost > 0 ? (netBenefit / totalSolutionCost) : 0;
 
     // Payback on one-time cost using annual net improvement
-    const annualNet = (baselineAnnual - solutionOpexAnnual) + (riskBenefitAnnual + prodBenefitAnnual);
+    const annualNet = (baselineAnnual - solutionOpexAnnual) + (riskBenefitAnnual + prodBenefitAnnual + nhiBenefitAnnual);
     const paybackMonths = annualNet > 0 ? (oneTime / (annualNet / 12)) : Infinity;
 
     // Benefit sources (annual)
@@ -201,7 +236,7 @@ export default function IdamCalculatorPage() {
     if (netBenefit <= 0) {
       insights.push("ROI is currently negative. Consider tuning implementation cost, optimizing license tier, or evaluating higher user adoption.");
     } else {
-      insights.push(`Projected net economic benefit of ${formatUSD(netBenefit)} over ${years} years with an expected return of ${(roi * 100).toFixed(1)}%.`);
+      insights.push(`Projected net economic benefit of ${formatMoney(netBenefit)} over ${years} years with an expected return of ${(roi * 100).toFixed(1)}%.`);
     }
 
     if (paybackMonths <= 18) {
@@ -210,13 +245,15 @@ export default function IdamCalculatorPage() {
       insights.push(`Capital payback period is estimated at ${paybackMonths.toFixed(1)} months based on automated provisioning and audit efficiencies.`);
     }
 
-    const topBenefit = Math.max(sourceTime, sourcePwd, sourceAudit, riskBenefitAnnual, prodBenefitAnnual);
+    const topBenefit = Math.max(sourceTime, sourcePwd, sourceAudit, riskBenefitAnnual, prodBenefitAnnual, nhiBenefitAnnual);
     if (topBenefit === prodBenefitAnnual) {
-      insights.push(`Workforce productivity recovery (${formatUSD(prodBenefitAnnual)}/yr) represents your largest financial value driver.`);
+      insights.push(`Workforce productivity recovery (${formatMoney(prodBenefitAnnual)}/yr) represents your largest financial value driver.`);
+    } else if (topBenefit === nhiBenefitAnnual) {
+      insights.push(`Non-Human Identity (NHI) governance (${formatMoney(nhiBenefitAnnual)}/yr) provides primary risk protection against machine credential compromise.`);
     } else if (topBenefit === sourceTime) {
-      insights.push(`Automated lifecycle provisioning time savings (${formatUSD(sourceTime)}/yr) is the primary driver of IT ops reduction.`);
+      insights.push(`Automated lifecycle provisioning time savings (${formatMoney(sourceTime)}/yr) is the primary driver of IT ops reduction.`);
     } else if (topBenefit === riskBenefitAnnual) {
-      insights.push(`Prevented unauthorized access and breach risk avoidance (${formatUSD(riskBenefitAnnual)}/yr) provides primary risk protection.`);
+      insights.push(`Prevented unauthorized access and breach risk avoidance (${formatMoney(riskBenefitAnnual)}/yr) provides primary risk protection.`);
     }
 
     // Cumulative net cashflow array across the horizon years for Line Chart
@@ -242,6 +279,7 @@ export default function IdamCalculatorPage() {
       solutionOpexAnnual,
       riskBenefitAnnual,
       prodBenefitAnnual,
+      nhiBenefitAnnual,
       annualSavings,
       annualBenefitsTotal,
       oneTime,
@@ -260,7 +298,63 @@ export default function IdamCalculatorPage() {
       insights,
       cumulativeBenefit,
     };
-  }, [inputs, selectedScenario, horizonYears]);
+  }, [inputs, selectedScenario, horizonYears, formatMoney]);
+
+  // Handle CSV Export
+  const handleExportCSV = () => {
+    const sections = [
+      {
+        title: "Executive Readout & Projections",
+        items: [
+          ["Currency", currency, ""],
+          ["Scenario", model.scenarioLabel, ""],
+          ["Time Horizon", `${model.years} Years`, ""],
+          ["Net Economic Benefit", formatMoney(model.netBenefit), "Net value over horizon"],
+          ["ROI", formatPercent(model.roi), model.roiBadge],
+          ["Payback Period", model.paybackMonths !== Infinity ? `${model.paybackMonths.toFixed(1)} Months` : "N/A", model.paybackBadge],
+          ["Total Solution Cost", formatMoney(model.totalSolutionCost), "One-time + OpEx over horizon"],
+          ["Annual Benefits Total", formatMoney(model.annualBenefitsTotal), "Annualized savings and risk reduction"],
+        ],
+      },
+      {
+        title: "Non-Human Identities (NHI) & Machine Secrets",
+        items: [
+          ["Service Accounts & Bots", inputs.nhiServiceAccounts, "Unmanaged service accounts"],
+          ["API Keys & CI/CD Secrets", inputs.nhiApiKeys, "Machine tokens & webhooks"],
+          ["Annual NHI Breach Risk Exposure", formatMoney(inputs.nhiRiskLossAnnual), "Financial exposure from exposed secrets"],
+          ["Governance Risk Reduction Rate", `${inputs.nhiGovernanceReductionPct}%`, "Attack surface eliminated via IDAM"],
+          ["Annual NHI Security Benefit", formatMoney(model.nhiBenefitAnnual), "Direct avoided breach risk"],
+        ],
+      },
+      {
+        title: "Organization & Workload Baseline",
+        items: [
+          ["Total Employees", inputs.employees, ""],
+          ["Protected Enterprise Apps", inputs.apps, ""],
+          ["Requests / User / Month", inputs.reqPerUserMonth, ""],
+          ["Current Mins / Request", inputs.minsPerRequestCurrent, "Manual workflow"],
+          ["New Mins / Request", inputs.minsPerRequestNew, "Automated IDAM"],
+          ["IT Operations Hourly Rate", formatMoney(inputs.opsHourly), ""],
+          ["Baseline Annual IT Cost", formatMoney(model.baselineAnnual), "Pre-solution operations"],
+        ],
+      },
+      {
+        title: "IDAM Solution Investment",
+        items: [
+          ["Annual Software License", formatMoney(inputs.licenseAnnual), "Recurring subscription"],
+          ["Implementation (One-time)", formatMoney(inputs.implOneTime), "Professional services"],
+          ["Training (One-time)", formatMoney(inputs.trainingOneTime), "Admin & user enablement"],
+          ["Ongoing Annual Support", formatMoney(inputs.supportAnnual), "Vendor maintenance"],
+          ["Admin FTE Count", inputs.adminFTE, ""],
+          ["Admin FTE Cost", formatMoney(inputs.fteCost), "Loaded salary"],
+          ["One-time Capital Investment", formatMoney(model.oneTime), ""],
+          ["Annual Solution OpEx", formatMoney(model.solutionOpexAnnual), ""],
+        ],
+      },
+    ];
+
+    exportSectionsToCSV("idam-roi-analysis.csv", sections);
+  };
 
   // Max value for bar chart
   const maxCostAvoided = Math.max(
@@ -290,7 +384,7 @@ export default function IdamCalculatorPage() {
             <LuChevronRight className="size-3.5" />
             <span>Accelerators</span>
             <LuChevronRight className="size-3.5" />
-            <span className="text-neutral-800 dark:text-neutral-200 font-medium">IDAM ROI Calculator</span>
+            <span className="text-neutral-800 dark:text-neutral-200 font-medium">IDAM ROI & NHI Calculator</span>
           </nav>
 
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-neutral-200 dark:border-white/10 pb-6">
@@ -300,20 +394,47 @@ export default function IdamCalculatorPage() {
                 <span>Identity & Access Management</span>
               </div>
               <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight text-neutral-900 dark:text-white">
-                IDAM ROI Calculator
+                IDAM ROI & NHI Calculator
               </h1>
               <p className="mt-1.5 text-sm sm:text-base text-neutral-600 dark:text-neutral-400 max-w-3xl">
-                Measure the ROI, cost avoidance, automated provisioning efficiencies, and risk reduction of an enterprise Identity & Access Management deployment.
+                Measure the economic ROI, automated provisioning efficiencies, Non-Human Identity (NHI) machine secrets protection, and password reset avoidance from enterprise IDAM.
               </p>
             </div>
 
             {/* Actions & Controls */}
             <div className="flex flex-wrap items-center gap-2 print:hidden shrink-0">
+              {/* Currency Toggle */}
+              <div className="inline-flex items-center rounded-xl border border-neutral-200 dark:border-white/15 bg-white dark:bg-neutral-900 p-1 shadow-2xs">
+                <button
+                  type="button"
+                  onClick={() => setCurrency("USD")}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    currency === "USD"
+                      ? "bg-amber-600 text-white shadow-xs"
+                      : "text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white"
+                  }`}
+                >
+                  USD ($)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCurrency("INR")}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    currency === "INR"
+                      ? "bg-amber-600 text-white shadow-xs"
+                      : "text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white"
+                  }`}
+                >
+                  INR (₹)
+                </button>
+              </div>
+
               {/* Scenario Toggle */}
               <div className="inline-flex rounded-lg border border-neutral-200 dark:border-white/10 p-1 bg-white dark:bg-neutral-900">
                 {Object.entries(SCENARIOS).map(([key, item]) => (
                   <button
                     key={key}
+                    type="button"
                     onClick={() => setSelectedScenario(key)}
                     className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-colors cursor-pointer ${
                       selectedScenario === key
@@ -331,6 +452,7 @@ export default function IdamCalculatorPage() {
                 {[1, 3, 5].map((yrs) => (
                   <button
                     key={yrs}
+                    type="button"
                     onClick={() => setHorizonYears(yrs)}
                     className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-colors cursor-pointer ${
                       horizonYears === yrs
@@ -344,6 +466,7 @@ export default function IdamCalculatorPage() {
               </div>
 
               <button
+                type="button"
                 onClick={handleSave}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-900 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
               >
@@ -352,6 +475,7 @@ export default function IdamCalculatorPage() {
               </button>
 
               <button
+                type="button"
                 onClick={handleReset}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-900 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
               >
@@ -359,12 +483,24 @@ export default function IdamCalculatorPage() {
                 <span>Reset</span>
               </button>
 
+              {/* CSV Export */}
               <button
+                type="button"
+                onClick={handleExportCSV}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-900 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
+              >
+                <LuFileSpreadsheet className="size-3.5 text-emerald-600 dark:text-emerald-400" />
+                <span>CSV</span>
+              </button>
+
+              {/* Print / PDF */}
+              <button
+                type="button"
                 onClick={handlePrint}
                 className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-amber-600 hover:bg-amber-700 text-white shadow-xs transition-colors cursor-pointer"
               >
                 <LuPrinter className="size-3.5" />
-                <span>Export PDF</span>
+                <span>Print / PDF</span>
               </button>
             </div>
           </div>
@@ -377,122 +513,110 @@ export default function IdamCalculatorPage() {
         <div className="mb-8 p-4 rounded-2xl border border-amber-500/20 bg-amber-500/5 dark:bg-amber-500/5 text-xs text-neutral-700 dark:text-neutral-300 flex items-start gap-3">
           <LuInfo className="size-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
           <div className="space-y-1">
-            <span className="font-bold text-amber-900 dark:text-amber-300">How this model works:</span>
+            <span className="font-bold text-amber-900 dark:text-amber-300">Enterprise Model Architecture:</span>
             <p className="text-neutral-600 dark:text-neutral-400 leading-relaxed">
-              This calculator analyzes baseline access ticketing overhead, self-service password reduction, audit certification effort, and workforce onboarding latency. It models recurring SaaS licenses and implementation costs against productivity gains and risk mitigation across customizable scenarios.
+              This model quantifies the financial return of automating user lifecycles (Joiner-Mover-Leaver), self-service password resets, and compliance audits. Additionally, it models <strong>Non-Human Identity (NHI) Governance</strong> across service accounts, API keys, and machine tokens to prevent credential exposure.
             </p>
           </div>
         </div>
 
-        {/* Executive Readout (4 Core KPIs Readout - Kept Completely Intact) */}
-        <section className="mb-10" aria-label="Executive Readout">
+        {/* Executive Readout (KPI Cards) */}
+        <section className="mb-10" aria-label="Key Performance Indicators">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <LuTrendingUp className="size-5 text-amber-600 dark:text-amber-400" />
               <h2 className="text-lg font-bold text-neutral-900 dark:text-white">
-                Executive Readout
+                Executive Readout ({model.years}-Year Horizon, {model.scenarioLabel} Scenario)
               </h2>
             </div>
             <div className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">
-              Active Model: <span className="text-amber-700 dark:text-amber-400">{model.scenarioLabel}</span> • <span className="text-neutral-800 dark:text-neutral-200">{model.years}-Year Horizon</span>
+              Active Currency: <span className="text-amber-600 dark:text-orange-400 font-bold">{currency} ({getCurrencySymbol(currency)})</span>
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* KPI 1: Expected ROI */}
-            <div className="rounded-xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-900/80 p-5 shadow-xs">
+            {/* ROI Metric */}
+            <div className="rounded-xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-900/80 p-4 shadow-xs">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-neutral-500 dark:text-neutral-400">Expected ROI</span>
-                <span
-                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                    model.roi >= 0.25
-                      ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20"
-                      : "bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20"
-                  }`}
-                >
+                <span className="text-xs font-medium text-neutral-500 dark:text-neutral-400">Projected ROI</span>
+                <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-800 dark:text-amber-400 border border-amber-500/20">
                   {model.roiBadge}
                 </span>
               </div>
-              <div className="mt-2 text-3xl font-extrabold text-amber-600 dark:text-amber-400">
-                {Number.isFinite(model.roi) ? `${(model.roi * 100).toFixed(1)}%` : "—"}
+              <div className="mt-2 text-2xl font-extrabold text-amber-600 dark:text-amber-400">
+                {formatPercent(model.roi)}
               </div>
-              <div className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-                Net return over {model.years}-year horizon
-              </div>
+              <p className="mt-1 text-[11px] text-neutral-500 dark:text-neutral-400">
+                Over {model.years} fiscal years
+              </p>
             </div>
 
-            {/* KPI 2: Net Benefit */}
-            <div className="rounded-xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-900/80 p-5 shadow-xs">
+            {/* Net Economic Benefit */}
+            <div className="rounded-xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-900/80 p-4 shadow-xs">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-neutral-500 dark:text-neutral-400">Net Benefit (Horizon)</span>
-                <span className="text-[10px] font-semibold text-neutral-400">Cumulative</span>
+                <span className="text-xs font-medium text-neutral-500 dark:text-neutral-400">Net Economic Benefit</span>
+                <LuDollarSign className="size-4 text-emerald-600 dark:text-emerald-400" />
               </div>
-              <div className="mt-2 text-3xl font-extrabold text-emerald-600 dark:text-emerald-400">
-                {formatUSD(model.netBenefit)}
+              <div className="mt-2 text-2xl font-extrabold text-emerald-600 dark:text-emerald-400 truncate">
+                {formatMoney(model.netBenefit, true)}
               </div>
-              <div className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-                Baseline avoided minus solution costs
-              </div>
+              <p className="mt-1 text-[11px] text-neutral-500 dark:text-neutral-400">
+                Total savings & efficiency minus all costs
+              </p>
             </div>
 
-            {/* KPI 3: Annual Net Improvement */}
-            <div className="rounded-xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-900/80 p-5 shadow-xs">
+            {/* Payback Period */}
+            <div className="rounded-xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-900/80 p-4 shadow-xs">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-neutral-500 dark:text-neutral-400">Annual Net Improvement</span>
-                <span className="text-[10px] font-semibold text-neutral-400">Recurring</span>
-              </div>
-              <div className="mt-2 text-3xl font-extrabold text-neutral-900 dark:text-white">
-                {formatUSD(model.annualNet)}
-              </div>
-              <div className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-                Recurring annual cashflow boost
-              </div>
-            </div>
-
-            {/* KPI 4: Payback Period */}
-            <div className="rounded-xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-900/80 p-5 shadow-xs">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-neutral-500 dark:text-neutral-400">Payback Period</span>
-                <span
-                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                    model.paybackMonths <= 18
-                      ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20"
-                      : "bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300"
-                  }`}
-                >
+                <span className="text-xs font-medium text-neutral-500 dark:text-neutral-400">Capital Payback</span>
+                <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300">
                   {model.paybackBadge}
                 </span>
               </div>
-              <div className="mt-2 text-3xl font-extrabold text-neutral-900 dark:text-white">
-                {model.paybackMonths === Infinity ? "N/A" : `${model.paybackMonths.toFixed(1)} mo`}
+              <div className="mt-2 text-2xl font-extrabold text-neutral-900 dark:text-white">
+                {model.paybackMonths !== Infinity ? `${model.paybackMonths.toFixed(1)} mo` : "N/A"}
               </div>
-              <div className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-                Time to break even on one-time investment
+              <p className="mt-1 text-[11px] text-neutral-500 dark:text-neutral-400">
+                Break-even on one-time implementation
+              </p>
+            </div>
+
+            {/* Total Solution Cost */}
+            <div className="rounded-xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-900/80 p-4 shadow-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-neutral-500 dark:text-neutral-400">Total Solution Cost</span>
+                <LuBoxes className="size-4 text-neutral-400" />
               </div>
+              <div className="mt-2 text-2xl font-extrabold text-neutral-900 dark:text-white truncate">
+                {formatMoney(model.totalSolutionCost, true)}
+              </div>
+              <p className="mt-1 text-[11px] text-neutral-500 dark:text-neutral-400">
+                CapEx ({formatMoney(model.oneTime, true)}) + OpEx ({formatMoney(model.solutionOpexAnnual * model.years, true)})
+              </p>
             </div>
           </div>
         </section>
 
-        {/* Main Workspace: Side-by-Side Split Architecture */}
+        {/* Main Grid: Inputs Left vs Charts Right */}
         <section className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start mb-12">
-          {/* LEFT COLUMN: Vertically Stacked Inputs */}
+          {/* LEFT: 5 Input Categories */}
           <div className="lg:col-span-7 space-y-6">
             {/* Category 1: Organization & Workload */}
             <div className="rounded-2xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-900/90 p-6 shadow-xs">
               <div className="border-b border-neutral-200 dark:border-white/10 pb-3 mb-5">
                 <h3 className="text-base font-bold text-neutral-900 dark:text-white flex items-center gap-2">
-                  <LuBuilding2 className="size-5 text-amber-600 dark:text-amber-400" />
-                  Organization & Workload
+                  <span className="flex size-6 items-center justify-center rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-400 text-xs font-bold">1</span>
+                  Organization Scale & Request Workload
                 </h3>
                 <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
-                  Identity volume, applications, and access request provisioning velocity.
+                  Workforce headcount, target application footprint, and manual provisioning overhead.
                 </p>
               </div>
 
-              <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                    Employees (Total Headcount)
+                    Total Enterprise Employees
                   </label>
                   <input
                     type="number"
@@ -501,12 +625,12 @@ export default function IdamCalculatorPage() {
                     onChange={(e) => handleInputChange("employees", e.target.value)}
                     className="w-full rounded-lg border border-neutral-300 dark:border-white/15 bg-neutral-50/50 dark:bg-neutral-800/50 px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
                   />
-                  <p className="mt-1 text-[11px] text-neutral-400">Total employees and contractors covered by IDAM.</p>
+                  <p className="mt-1 text-[11px] text-neutral-400">Identities governed under IDAM scope.</p>
                 </div>
 
                 <div>
                   <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                    Apps / Systems Integrated
+                    Integrated Applications
                   </label>
                   <input
                     type="number"
@@ -515,85 +639,175 @@ export default function IdamCalculatorPage() {
                     onChange={(e) => handleInputChange("apps", e.target.value)}
                     className="w-full rounded-lg border border-neutral-300 dark:border-white/15 bg-neutral-50/50 dark:bg-neutral-800/50 px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
                   />
-                  <p className="mt-1 text-[11px] text-neutral-400">Target cloud, on-premises, and legacy applications.</p>
+                  <p className="mt-1 text-[11px] text-neutral-400">SaaS, cloud, and legacy on-premises apps.</p>
                 </div>
 
                 <div>
                   <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                    Access Requests per User / Month
+                    Access Requests / User / Month
                   </label>
                   <input
                     type="number"
-                    min="0"
                     step="0.1"
+                    min="0"
                     value={inputs.reqPerUserMonth}
                     onChange={(e) => handleInputChange("reqPerUserMonth", e.target.value)}
                     className="w-full rounded-lg border border-neutral-300 dark:border-white/15 bg-neutral-50/50 dark:bg-neutral-800/50 px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
                   />
-                  <p className="mt-1 text-[11px] text-neutral-400">Joiner/Mover/Leaver (JML) and privilege grant requests.</p>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                      Current Time (min/req)
-                    </label>
-                    <input
-                      type="number"
-                      min="1"
-                      value={inputs.minsPerRequestCurrent}
-                      onChange={(e) => handleInputChange("minsPerRequestCurrent", e.target.value)}
-                      className="w-full rounded-lg border border-neutral-300 dark:border-white/15 bg-neutral-50/50 dark:bg-neutral-800/50 px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
-                    />
-                    <p className="mt-1 text-[11px] text-neutral-400">Manual approval + ticketing time.</p>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                      With IDAM (min/req)
-                    </label>
-                    <input
-                      type="number"
-                      min="1"
-                      value={inputs.minsPerRequestNew}
-                      onChange={(e) => handleInputChange("minsPerRequestNew", e.target.value)}
-                      className="w-full rounded-lg border border-neutral-300 dark:border-white/15 bg-neutral-50/50 dark:bg-neutral-800/50 px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
-                    />
-                    <p className="mt-1 text-[11px] text-neutral-400">Automated birthright & RBAC speed.</p>
-                  </div>
+                  <p className="mt-1 text-[11px] text-neutral-400">Joiner, mover, leaver, and role change requests.</p>
                 </div>
 
                 <div>
                   <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                    Blended Ops Hourly Rate ($/hr)
+                    IT Operations Hourly Rate ({getCurrencySymbol(currency)}/hr)
                   </label>
                   <input
                     type="number"
-                    min="1"
+                    min="0"
                     value={inputs.opsHourly}
                     onChange={(e) => handleInputChange("opsHourly", e.target.value)}
                     className="w-full rounded-lg border border-neutral-300 dark:border-white/15 bg-neutral-50/50 dark:bg-neutral-800/50 px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
                   />
-                  <p className="mt-1 text-[11px] text-neutral-400">Fully loaded rate for IT helpdesk / IAM administrators.</p>
+                  <p className="mt-1 text-[11px] text-neutral-400">Loaded hourly rate for helpdesk/IT ops.</p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+                    Current Mins / Request (Manual)
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={inputs.minsPerRequestCurrent}
+                    onChange={(e) => handleInputChange("minsPerRequestCurrent", e.target.value)}
+                    className="w-full rounded-lg border border-neutral-300 dark:border-white/15 bg-neutral-50/50 dark:bg-neutral-800/50 px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
+                  />
+                  <p className="mt-1 text-[11px] text-neutral-400">Approval, ticket review, and manual provisioning.</p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+                    New Mins / Request (Automated)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={inputs.minsPerRequestNew}
+                    onChange={(e) => handleInputChange("minsPerRequestNew", e.target.value)}
+                    className="w-full rounded-lg border border-neutral-300 dark:border-white/15 bg-neutral-50/50 dark:bg-neutral-800/50 px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
+                  />
+                  <p className="mt-1 text-[11px] text-neutral-400">Target workflow automation latency with IDAM.</p>
                 </div>
               </div>
             </div>
 
-            {/* Category 2: Passwords & Audit (Current Baseline) */}
-            <div className="rounded-2xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-900/90 p-6 shadow-xs">
+            {/* Category 2: Non-Human Identities (NHI) & Machine Secrets (NEW!) */}
+            <div className="rounded-2xl border border-amber-500/30 bg-gradient-to-br from-white via-neutral-50/80 to-amber-50/20 dark:from-neutral-900/90 dark:via-neutral-900 dark:to-amber-950/20 p-6 shadow-xs">
               <div className="border-b border-neutral-200 dark:border-white/10 pb-3 mb-5">
-                <h3 className="text-base font-bold text-neutral-900 dark:text-white flex items-center gap-2">
-                  <LuReceipt className="size-5 text-amber-600 dark:text-amber-400" />
-                  Passwords & Audit (Current Baseline)
-                </h3>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-base font-bold text-neutral-900 dark:text-white flex items-center gap-2">
+                    <span className="flex size-6 items-center justify-center rounded-md bg-amber-500/20 text-amber-800 dark:text-amber-400 text-xs font-bold">2</span>
+                    Non-Human Identities (NHI) & Machine Secrets
+                  </h3>
+                  <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2.5 py-0.5 text-[10px] font-bold text-amber-800 dark:text-amber-400 border border-amber-500/20">
+                    <LuBot className="size-3 text-amber-600 dark:text-amber-400" />
+                    NHI Protection
+                  </span>
+                </div>
                 <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
-                  Helpdesk password ticket volume and compliance audit evidence gathering.
+                  Govern service accounts, bot credentials, API keys, and CI/CD machine secrets to eradicate static token exposure.
                 </p>
               </div>
 
-              <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                    Password Reset Tickets / Month
+                    Service Accounts & Bots
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={inputs.nhiServiceAccounts}
+                    onChange={(e) => handleInputChange("nhiServiceAccounts", e.target.value)}
+                    className="w-full rounded-lg border border-neutral-300 dark:border-white/15 bg-white dark:bg-neutral-800/70 px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
+                  />
+                  <p className="mt-1 text-[11px] text-neutral-400">Active machine service identities.</p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+                    API Keys & CI/CD Pipeline Secrets
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={inputs.nhiApiKeys}
+                    onChange={(e) => handleInputChange("nhiApiKeys", e.target.value)}
+                    className="w-full rounded-lg border border-neutral-300 dark:border-white/15 bg-white dark:bg-neutral-800/70 px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
+                  />
+                  <p className="mt-1 text-[11px] text-neutral-400">Machine access keys across repositories and clouds.</p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+                    NHI Annual Breach Exposure ({getCurrencySymbol(currency)})
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={inputs.nhiRiskLossAnnual}
+                    onChange={(e) => handleInputChange("nhiRiskLossAnnual", e.target.value)}
+                    className="w-full rounded-lg border border-neutral-300 dark:border-white/15 bg-white dark:bg-neutral-800/70 px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
+                  />
+                  <p className="mt-1 text-[11px] text-neutral-400">Financial exposure from leaked machine credentials.</p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+                    NHI Risk Reduction (%)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={inputs.nhiGovernanceReductionPct}
+                    onChange={(e) => handleInputChange("nhiGovernanceReductionPct", e.target.value)}
+                    className="w-full rounded-lg border border-neutral-300 dark:border-white/15 bg-white dark:bg-neutral-800/70 px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
+                  />
+                  <p className="mt-1 text-[11px] text-neutral-400">Attack surface eliminated through automated NHI discovery.</p>
+                </div>
+              </div>
+
+              {/* Live NHI Benefit Callout */}
+              <div className="mt-4 p-3 rounded-xl border border-amber-500/20 bg-amber-500/5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                <div className="flex items-center gap-2 text-neutral-700 dark:text-neutral-300">
+                  <LuSparkles className="size-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                  <span>
+                    Governing <strong>{(inputs.nhiServiceAccounts + inputs.nhiApiKeys).toLocaleString()}</strong> machine secrets eliminates static token leaks.
+                  </span>
+                </div>
+                <div className="font-mono font-bold text-amber-700 dark:text-amber-300 shrink-0">
+                  + {formatMoney(model.nhiBenefitAnnual)}/yr in avoided breach risk
+                </div>
+              </div>
+            </div>
+
+            {/* Category 3: Passwords & Audit (Current) */}
+            <div className="rounded-2xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-900/90 p-6 shadow-xs">
+              <div className="border-b border-neutral-200 dark:border-white/10 pb-3 mb-5">
+                <h3 className="text-base font-bold text-neutral-900 dark:text-white flex items-center gap-2">
+                  <span className="flex size-6 items-center justify-center rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-400 text-xs font-bold">3</span>
+                  Password Helpdesk & Compliance Audit Costs
+                </h3>
+                <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
+                  Current recurring expenses for password resets and preparation for internal/external audits.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+                    Password Resets / Month
                   </label>
                   <input
                     type="number"
@@ -602,12 +816,12 @@ export default function IdamCalculatorPage() {
                     onChange={(e) => handleInputChange("pwdResetsMonth", e.target.value)}
                     className="w-full rounded-lg border border-neutral-300 dark:border-white/15 bg-neutral-50/50 dark:bg-neutral-800/50 px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
                   />
-                  <p className="mt-1 text-[11px] text-neutral-400">Monthly user lockout tickets handled by Tier 1 support.</p>
+                  <p className="mt-1 text-[11px] text-neutral-400">Helpdesk tickets for account unlocks & resets.</p>
                 </div>
 
                 <div>
                   <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                    Cost per Password Reset ($)
+                    Cost Per Password Reset ({getCurrencySymbol(currency)})
                   </label>
                   <input
                     type="number"
@@ -616,12 +830,12 @@ export default function IdamCalculatorPage() {
                     onChange={(e) => handleInputChange("pwdResetCost", e.target.value)}
                     className="w-full rounded-lg border border-neutral-300 dark:border-white/15 bg-neutral-50/50 dark:bg-neutral-800/50 px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
                   />
-                  <p className="mt-1 text-[11px] text-neutral-400">Direct support cost per password ticket (benchmark: $18-$35).</p>
+                  <p className="mt-1 text-[11px] text-neutral-400">Industry average ranges from $18 to $30.</p>
                 </div>
 
                 <div>
                   <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                    Audit & Review Effort (Hours / Month)
+                    Audit Prep Hours / Month
                   </label>
                   <input
                     type="number"
@@ -630,41 +844,41 @@ export default function IdamCalculatorPage() {
                     onChange={(e) => handleInputChange("auditHoursMonth", e.target.value)}
                     className="w-full rounded-lg border border-neutral-300 dark:border-white/15 bg-neutral-50/50 dark:bg-neutral-800/50 px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
                   />
-                  <p className="mt-1 text-[11px] text-neutral-400">Hours spent collating logs, manager reviews, and access certifications.</p>
+                  <p className="mt-1 text-[11px] text-neutral-400">Staff time pulling access certification reports.</p>
                 </div>
 
                 <div>
                   <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                    Audit Hourly Rate ($/hr)
+                    Auditor / Compliance Hourly Rate ({getCurrencySymbol(currency)})
                   </label>
                   <input
                     type="number"
-                    min="1"
+                    min="0"
                     value={inputs.auditHourly}
                     onChange={(e) => handleInputChange("auditHourly", e.target.value)}
                     className="w-full rounded-lg border border-neutral-300 dark:border-white/15 bg-neutral-50/50 dark:bg-neutral-800/50 px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
                   />
-                  <p className="mt-1 text-[11px] text-neutral-400">Loaded cost for internal compliance auditors and security leads.</p>
+                  <p className="mt-1 text-[11px] text-neutral-400">Loaded rate for compliance specialists.</p>
                 </div>
               </div>
             </div>
 
-            {/* Category 3: IDAM Solution Investment */}
+            {/* Category 4: IDAM Solution Investment */}
             <div className="rounded-2xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-900/90 p-6 shadow-xs">
               <div className="border-b border-neutral-200 dark:border-white/10 pb-3 mb-5">
                 <h3 className="text-base font-bold text-neutral-900 dark:text-white flex items-center gap-2">
-                  <LuBoxes className="size-5 text-amber-600 dark:text-amber-400" />
+                  <span className="flex size-6 items-center justify-center rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-400 text-xs font-bold">4</span>
                   IDAM Solution Investment
                 </h3>
                 <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
-                  Platform subscription, systems integration, admin staffing, and maintenance.
+                  Software licensing, implementation services, training, and ongoing administration.
                 </p>
               </div>
 
-              <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                    Platform Licenses (Annual $)
+                    Annual Software License ({getCurrencySymbol(currency)}/yr)
                   </label>
                   <input
                     type="number"
@@ -673,71 +887,40 @@ export default function IdamCalculatorPage() {
                     onChange={(e) => handleInputChange("licenseAnnual", e.target.value)}
                     className="w-full rounded-lg border border-neutral-300 dark:border-white/15 bg-neutral-50/50 dark:bg-neutral-800/50 px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
                   />
-                  <p className="mt-1 text-[11px] text-neutral-400">Annual recurring IDAM software licenses / SaaS fees.</p>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                      Implementation (One-time $)
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={inputs.implOneTime}
-                      onChange={(e) => handleInputChange("implOneTime", e.target.value)}
-                      className="w-full rounded-lg border border-neutral-300 dark:border-white/15 bg-neutral-50/50 dark:bg-neutral-800/50 px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
-                    />
-                    <p className="mt-1 text-[11px] text-neutral-400">Professional services & connectors.</p>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                      Training (One-time $)
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={inputs.trainingOneTime}
-                      onChange={(e) => handleInputChange("trainingOneTime", e.target.value)}
-                      className="w-full rounded-lg border border-neutral-300 dark:border-white/15 bg-neutral-50/50 dark:bg-neutral-800/50 px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
-                    />
-                    <p className="mt-1 text-[11px] text-neutral-400">Change management & training.</p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                      Admin FTE (With IDAM)
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.1"
-                      value={inputs.adminFTE}
-                      onChange={(e) => handleInputChange("adminFTE", e.target.value)}
-                      className="w-full rounded-lg border border-neutral-300 dark:border-white/15 bg-neutral-50/50 dark:bg-neutral-800/50 px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
-                    />
-                    <p className="mt-1 text-[11px] text-neutral-400">Dedicated IDAM operational staff.</p>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                      Cost per FTE ($/year)
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={inputs.fteCost}
-                      onChange={(e) => handleInputChange("fteCost", e.target.value)}
-                      className="w-full rounded-lg border border-neutral-300 dark:border-white/15 bg-neutral-50/50 dark:bg-neutral-800/50 px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
-                    />
-                    <p className="mt-1 text-[11px] text-neutral-400">Fully burdened cost per admin.</p>
-                  </div>
+                  <p className="mt-1 text-[11px] text-neutral-400">Recurring IGA / AM platform fee.</p>
                 </div>
 
                 <div>
                   <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                    Support & Maintenance (Annual $)
+                    Implementation Cost ({getCurrencySymbol(currency)}, One-Time)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={inputs.implOneTime}
+                    onChange={(e) => handleInputChange("implOneTime", e.target.value)}
+                    className="w-full rounded-lg border border-neutral-300 dark:border-white/15 bg-neutral-50/50 dark:bg-neutral-800/50 px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
+                  />
+                  <p className="mt-1 text-[11px] text-neutral-400">Architecture, connectors, policy deployment.</p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+                    Training & Enablement ({getCurrencySymbol(currency)}, One-Time)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={inputs.trainingOneTime}
+                    onChange={(e) => handleInputChange("trainingOneTime", e.target.value)}
+                    className="w-full rounded-lg border border-neutral-300 dark:border-white/15 bg-neutral-50/50 dark:bg-neutral-800/50 px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
+                  />
+                  <p className="mt-1 text-[11px] text-neutral-400">Administrator and helpdesk certification.</p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+                    Annual Support & Maintenance ({getCurrencySymbol(currency)}/yr)
                   </label>
                   <input
                     type="number"
@@ -746,139 +929,143 @@ export default function IdamCalculatorPage() {
                     onChange={(e) => handleInputChange("supportAnnual", e.target.value)}
                     className="w-full rounded-lg border border-neutral-300 dark:border-white/15 bg-neutral-50/50 dark:bg-neutral-800/50 px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
                   />
-                  <p className="mt-1 text-[11px] text-neutral-400">Vendor 24x7 SLA support and patch maintenance.</p>
+                  <p className="mt-1 text-[11px] text-neutral-400">Connector updates and SLA coverage.</p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+                    Internal Admin FTE
+                  </label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    value={inputs.adminFTE}
+                    onChange={(e) => handleInputChange("adminFTE", e.target.value)}
+                    className="w-full rounded-lg border border-neutral-300 dark:border-white/15 bg-neutral-50/50 dark:bg-neutral-800/50 px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
+                  />
+                  <p className="mt-1 text-[11px] text-neutral-400">Dedicated IDAM administrators.</p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+                    Loaded FTE Cost ({getCurrencySymbol(currency)}/yr)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={inputs.fteCost}
+                    onChange={(e) => handleInputChange("fteCost", e.target.value)}
+                    className="w-full rounded-lg border border-neutral-300 dark:border-white/15 bg-neutral-50/50 dark:bg-neutral-800/50 px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
+                  />
+                  <p className="mt-1 text-[11px] text-neutral-400">Fully loaded annual compensation.</p>
                 </div>
               </div>
             </div>
 
-            {/* Category 4: Business Impact Drivers */}
+            {/* Category 5: Business Impact Drivers */}
             <div className="rounded-2xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-900/90 p-6 shadow-xs">
               <div className="border-b border-neutral-200 dark:border-white/10 pb-3 mb-5">
                 <h3 className="text-base font-bold text-neutral-900 dark:text-white flex items-center gap-2">
-                  <LuSlidersHorizontal className="size-5 text-amber-600 dark:text-amber-400" />
-                  Business Impact Drivers (Scenario Levers)
+                  <span className="flex size-6 items-center justify-center rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-400 text-xs font-bold">5</span>
+                  Business Impact Drivers
                 </h3>
                 <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
-                  Percentage gains applied across password reduction, risk avoidance, and user speed.
+                  Productivity recaptured, password reset reduction, and breach risk avoidance.
                 </p>
               </div>
 
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                      Password Reduction (%)
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      max="100"
-                      value={inputs.pwdReductionPct}
-                      onChange={(e) => handleInputChange("pwdReductionPct", e.target.value)}
-                      className="w-full rounded-lg border border-neutral-300 dark:border-white/15 bg-neutral-50/50 dark:bg-neutral-800/50 px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
-                    />
-                    <p className="mt-1 text-[11px] text-neutral-400">Self-service password reset gains.</p>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                      Audit Reduction (%)
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      max="100"
-                      value={inputs.auditReductionPct}
-                      onChange={(e) => handleInputChange("auditReductionPct", e.target.value)}
-                      className="w-full rounded-lg border border-neutral-300 dark:border-white/15 bg-neutral-50/50 dark:bg-neutral-800/50 px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
-                    />
-                    <p className="mt-1 text-[11px] text-neutral-400">Automated certification reporting.</p>
-                  </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+                    Password Reset Reduction (%)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={inputs.pwdReductionPct}
+                    onChange={(e) => handleInputChange("pwdReductionPct", e.target.value)}
+                    className="w-full rounded-lg border border-neutral-300 dark:border-white/15 bg-neutral-50/50 dark:bg-neutral-800/50 px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
+                  />
+                  <p className="mt-1 text-[11px] text-neutral-400">Target reduction via self-service portal (SSPR).</p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                      Annual Risk Exposure ($)
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={inputs.riskLossAnnual}
-                      onChange={(e) => handleInputChange("riskLossAnnual", e.target.value)}
-                      className="w-full rounded-lg border border-neutral-300 dark:border-white/15 bg-neutral-50/50 dark:bg-neutral-800/50 px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
-                    />
-                    <p className="mt-1 text-[11px] text-neutral-400">Expected annual loss from access breaches.</p>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                      Risk Reduction (%)
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      max="100"
-                      value={inputs.riskReductionPct}
-                      onChange={(e) => handleInputChange("riskReductionPct", e.target.value)}
-                      className="w-full rounded-lg border border-neutral-300 dark:border-white/15 bg-neutral-50/50 dark:bg-neutral-800/50 px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
-                    />
-                    <p className="mt-1 text-[11px] text-neutral-400">Breach reduction via least privilege.</p>
-                  </div>
+                <div>
+                  <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+                    Audit Effort Reduction (%)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={inputs.auditReductionPct}
+                    onChange={(e) => handleInputChange("auditReductionPct", e.target.value)}
+                    className="w-full rounded-lg border border-neutral-300 dark:border-white/15 bg-neutral-50/50 dark:bg-neutral-800/50 px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
+                  />
+                  <p className="mt-1 text-[11px] text-neutral-400">Automated access certification campaigns.</p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                      Hours Saved / User / Yr
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.1"
-                      value={inputs.prodHoursPerUser}
-                      onChange={(e) => handleInputChange("prodHoursPerUser", e.target.value)}
-                      className="w-full rounded-lg border border-neutral-300 dark:border-white/15 bg-neutral-50/50 dark:bg-neutral-800/50 px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
-                    />
-                    <p className="mt-1 text-[11px] text-neutral-400">Elimination of user wait-time.</p>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                      User Value Rate ($/hr)
-                    </label>
-                    <input
-                      type="number"
-                      min="1"
-                      value={inputs.prodHourly}
-                      onChange={(e) => handleInputChange("prodHourly", e.target.value)}
-                      className="w-full rounded-lg border border-neutral-300 dark:border-white/15 bg-neutral-50/50 dark:bg-neutral-800/50 px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
-                    />
-                    <p className="mt-1 text-[11px] text-neutral-400">Blended employee productivity value.</p>
-                  </div>
+                <div>
+                  <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+                    Annual Breach Loss Risk ({getCurrencySymbol(currency)})
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={inputs.riskLossAnnual}
+                    onChange={(e) => handleInputChange("riskLossAnnual", e.target.value)}
+                    className="w-full rounded-lg border border-neutral-300 dark:border-white/15 bg-neutral-50/50 dark:bg-neutral-800/50 px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
+                  />
+                  <p className="mt-1 text-[11px] text-neutral-400">Baseline exposure from unauthorized access & orphan accounts.</p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+                    Breach Risk Reduction (%)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={inputs.riskReductionPct}
+                    onChange={(e) => handleInputChange("riskReductionPct", e.target.value)}
+                    className="w-full rounded-lg border border-neutral-300 dark:border-white/15 bg-neutral-50/50 dark:bg-neutral-800/50 px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
+                  />
+                  <p className="mt-1 text-[11px] text-neutral-400">Risk avoided through automated deprovisioning.</p>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* RIGHT COLUMN: Live Dynamic Charts (Sticky on Desktop) */}
+          {/* RIGHT: Visual Analytics (Sticky) */}
           <div className="lg:col-span-5 lg:sticky lg:top-24 space-y-6">
-            {/* 1. LINE CHART FIRST (Top): Cumulative Net Benefit Trend */}
+            {/* 1. Line Chart: Cumulative Net Cashflow */}
             <div className="rounded-2xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-900/90 p-5 shadow-xs">
               <div className="flex items-center justify-between mb-1">
                 <h3 className="text-sm font-bold text-neutral-900 dark:text-white flex items-center gap-1.5">
                   <LuTrendingUp className="size-4 text-amber-600 dark:text-amber-400" />
-                  <span>Cumulative Net Benefit</span>
+                  <span>Cumulative Net Value ({currency})</span>
                 </h3>
-                <span className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold">
-                  {model.paybackMonths === Infinity ? "No payback" : `Payback: ${model.paybackMonths.toFixed(1)} mo`}
+                <span className="text-xs text-neutral-500 dark:text-neutral-400 font-medium">
+                  {model.years}-Year Horizon
                 </span>
               </div>
               <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-4">
-                Net cashflow trajectory after upfront deployment and ongoing operational savings.
+                Cumulative cashflow from initial implementation through multi-year operational return.
               </p>
 
               {/* Pure SVG Line / Trend Chart */}
               <div className="w-full h-44 pt-2">
                 <div className="relative w-full h-32 border-b border-neutral-200 dark:border-white/10">
                   <svg className="w-full h-full overflow-visible" preserveAspectRatio="none" viewBox="0 0 500 130">
+                    <defs>
+                      <linearGradient id="idamGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#d97706" stopOpacity="0.25" />
+                        <stop offset="100%" stopColor="#d97706" stopOpacity="0.0" />
+                      </linearGradient>
+                    </defs>
+
                     {/* Zero baseline */}
                     {minCumIdam < 0 && (
                       <line
@@ -892,10 +1079,11 @@ export default function IdamCalculatorPage() {
                       />
                     )}
 
+                    {/* Trend points & path */}
                     {(() => {
+                      const len = model.cumulativeBenefit.length;
                       const points = model.cumulativeBenefit.map((val, i) => {
-                        const denom = Math.max(1, model.years - 1);
-                        const x = (i / denom) * 440 + 30;
+                        const x = len > 1 ? (i / (len - 1)) * 460 + 20 : 250;
                         const y = 130 - ((val - minCumIdam) / cumRangeIdam) * 105 - 12;
                         return { x, y, val };
                       });
@@ -909,11 +1097,11 @@ export default function IdamCalculatorPage() {
                               <circle cx={p.x} cy={p.y} r="4" fill="#f59e0b" stroke="#ffffff" strokeWidth="2" />
                               <text
                                 x={p.x}
-                                y={p.y - 7}
+                                y={p.y - 8}
                                 textAnchor="middle"
                                 className="text-[10px] font-semibold fill-neutral-700 dark:fill-neutral-300"
                               >
-                                {formatUSD(p.val)}
+                                {formatMoney(p.val, true)}
                               </text>
                             </g>
                           ))}
@@ -924,185 +1112,97 @@ export default function IdamCalculatorPage() {
                 </div>
 
                 <div className="flex justify-between items-center px-1 pt-2 text-[11px] font-medium text-neutral-500 dark:text-neutral-400">
-                  {Array.from({ length: model.years }).map((_, i) => (
-                    <span key={i}>Y{i + 1}</span>
+                  {Array.from({ length: model.years }, (_, i) => i + 1).map((y) => (
+                    <span key={y}>Y{y}</span>
                   ))}
                 </div>
               </div>
             </div>
 
-            {/* 2. BAR CHART SECOND (Below): Cost vs. Cost Avoided */}
+            {/* 2. Grouped Cost Comparison Bar Chart */}
             <div className="rounded-2xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-900/90 p-5 shadow-xs">
               <div className="flex items-center justify-between mb-1">
                 <h3 className="text-sm font-bold text-neutral-900 dark:text-white flex items-center gap-1.5">
-                  <LuLayers className="size-4 text-amber-600 dark:text-amber-400" />
-                  <span>Cost vs. Cost Avoided</span>
+                  <LuChartBar className="size-4 text-amber-600 dark:text-amber-400" />
+                  <span>Annualized Cost Avoidance ({currency})</span>
                 </h3>
-                <span className="text-xs text-neutral-500 dark:text-neutral-400">
-                  {model.scenarioLabel}
-                </span>
               </div>
               <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-4">
-                Baseline cost vs. IDAM total cost (Year 1 includes upfront capex).
+                Pre-solution baseline expenditure vs. ongoing IDAM operational run-rate.
               </p>
 
-              <div className="w-full h-40 flex items-end justify-between gap-3 px-2 border-b border-neutral-200 dark:border-white/10 pb-2">
-                {Array.from({ length: model.years }).map((_, i) => {
-                  const yearNum = i + 1;
-                  const baselineVal = model.baselineAnnual;
-                  const solutionVal = model.solutionOpexAnnual + (i === 0 ? model.oneTime : 0);
-
-                  const bH = Math.max(10, (baselineVal / maxCostAvoided) * 100);
-                  const sH = Math.max(10, (solutionVal / maxCostAvoided) * 100);
-
-                  return (
-                    <div key={yearNum} className="flex-1 flex flex-col items-center gap-1 h-full justify-end">
-                      <div className="w-full flex items-end justify-center gap-1.5 h-full">
-                        {/* Baseline */}
-                        <div
-                          className="w-1/2 max-w-[20px] bg-rose-500/80 hover:bg-rose-500 rounded-t-sm transition-all relative group"
-                          style={{ height: `${bH}%` }}
-                        >
-                          <div className="absolute -top-7 left-1/2 -translate-x-1/2 hidden group-hover:block bg-neutral-900 text-white text-[10px] px-1.5 py-0.5 rounded shadow pointer-events-none whitespace-nowrap z-10">
-                            {formatUSD(baselineVal)}
-                          </div>
-                        </div>
-                        {/* With IDAM */}
-                        <div
-                          className="w-1/2 max-w-[20px] bg-amber-500/80 hover:bg-amber-500 rounded-t-sm transition-all relative group"
-                          style={{ height: `${sH}%` }}
-                        >
-                          <div className="absolute -top-7 left-1/2 -translate-x-1/2 hidden group-hover:block bg-neutral-900 text-white text-[10px] px-1.5 py-0.5 rounded shadow pointer-events-none whitespace-nowrap z-10">
-                            {formatUSD(solutionVal)}
-                          </div>
-                        </div>
+              <div className="w-full h-36 pt-2">
+                <div className="h-28 flex items-end justify-center gap-12 border-b border-neutral-200 dark:border-white/10 pb-2">
+                  {/* Baseline Bar */}
+                  <div className="flex flex-col items-center gap-1 h-full justify-end w-20">
+                    <div
+                      className="w-full bg-rose-500/80 hover:bg-rose-500 rounded-t-sm transition-all relative group"
+                      style={{ height: `${Math.max(15, (model.baselineAnnual / maxCostAvoided) * 100)}%` }}
+                    >
+                      <div className="absolute -top-7 left-1/2 -translate-x-1/2 hidden group-hover:block bg-neutral-900 text-white text-[10px] px-1.5 py-0.5 rounded shadow pointer-events-none whitespace-nowrap z-10">
+                        {formatMoney(model.baselineAnnual)}
                       </div>
-                      <span className="text-[10px] font-medium text-neutral-500 dark:text-neutral-400">
-                        Y{yearNum}
-                      </span>
                     </div>
-                  );
-                })}
-              </div>
+                    <span className="text-[11px] font-medium text-neutral-500 dark:text-neutral-400">
+                      Baseline
+                    </span>
+                  </div>
 
-              <div className="flex items-center justify-center gap-5 mt-3 text-[11px]">
-                <div className="flex items-center gap-1.5">
-                  <span className="size-2.5 rounded-xs bg-rose-500" />
-                  <span className="text-neutral-600 dark:text-neutral-400">Baseline</span>
+                  {/* With IDAM Bar */}
+                  <div className="flex flex-col items-center gap-1 h-full justify-end w-20">
+                    <div
+                      className="w-full bg-amber-500/80 hover:bg-amber-500 rounded-t-sm transition-all relative group"
+                      style={{ height: `${Math.max(15, (model.solutionOpexAnnual / maxCostAvoided) * 100)}%` }}
+                    >
+                      <div className="absolute -top-7 left-1/2 -translate-x-1/2 hidden group-hover:block bg-neutral-900 text-white text-[10px] px-1.5 py-0.5 rounded shadow pointer-events-none whitespace-nowrap z-10">
+                        {formatMoney(model.solutionOpexAnnual)}
+                      </div>
+                    </div>
+                    <span className="text-[11px] font-medium text-neutral-500 dark:text-neutral-400">
+                      With IDAM
+                    </span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="size-2.5 rounded-xs bg-amber-500" />
-                  <span className="text-neutral-600 dark:text-neutral-400">With IDAM</span>
+
+                <div className="flex items-center justify-center gap-6 mt-3 text-xs">
+                  <div className="flex items-center gap-1.5">
+                    <span className="size-2.5 rounded-xs bg-rose-500" />
+                    <span className="text-[11px] text-neutral-600 dark:text-neutral-400">Pre-Solution Loss</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="size-2.5 rounded-xs bg-amber-500" />
+                    <span className="text-[11px] text-neutral-600 dark:text-neutral-400">IDAM Annual OpEx</span>
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* 3. Solution Cost Breakdown */}
+            {/* Dynamic Executive Insights */}
             <div className="rounded-2xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-900/90 p-5 shadow-xs">
-              <div className="flex items-center justify-between mb-1">
-                <h3 className="text-sm font-bold text-neutral-900 dark:text-white">
-                  Solution Cost Breakdown
-                </h3>
-                <span className="text-xs font-mono font-bold text-neutral-800 dark:text-neutral-200">
-                  {formatUSD(model.totalSolutionCost)}
-                </span>
-              </div>
-              <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-4">
-                Total solution investments across the {model.years}-year horizon.
-              </p>
-
-              <div className="space-y-2 py-1">
-                {[
-                  { label: "Licenses", val: inputs.licenseAnnual * model.years, color: "bg-amber-500" },
-                  { label: "Implementation", val: inputs.implOneTime, color: "bg-amber-700" },
-                  { label: "Admin / Ops FTE", val: inputs.adminFTE * inputs.fteCost * model.years, color: "bg-orange-500" },
-                  { label: "Support & Maint.", val: inputs.supportAnnual * model.years, color: "bg-amber-400" },
-                  { label: "Training & Adoption", val: inputs.trainingOneTime, color: "bg-yellow-500" },
-                ].map((item, idx) => {
-                  const pct = model.totalSolutionCost > 0 ? (item.val / model.totalSolutionCost) * 100 : 0;
-                  return (
-                    <div key={idx} className="space-y-1">
-                      <div className="flex justify-between text-xs text-neutral-700 dark:text-neutral-300">
-                        <span className="flex items-center gap-1.5">
-                          <span className={`size-2 rounded-full ${item.color}`} />
-                          <span>{item.label}</span>
-                        </span>
-                        <span className="font-mono">{formatUSD(item.val)} ({pct.toFixed(0)}%)</span>
-                      </div>
-                      <div className="w-full h-1.5 rounded-full bg-neutral-100 dark:bg-neutral-800 overflow-hidden">
-                        <div className={`h-full ${item.color}`} style={{ width: `${pct}%` }} />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* 4. Benefit Drivers (Annual) */}
-            <div className="rounded-2xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-900/90 p-5 shadow-xs">
-              <div className="flex items-center justify-between mb-1">
-                <h3 className="text-sm font-bold text-neutral-900 dark:text-white">
-                  Benefit Drivers (Annual)
-                </h3>
-                <span className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold font-mono">
-                  {formatUSD(model.annualBenefitsTotal)}/yr
-                </span>
-              </div>
-              <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-4">
-                Annual value generated through automation, audits, and risk control.
-              </p>
-
-              <div className="space-y-2 py-1">
-                {[
-                  { label: "Workforce Productivity", val: model.prodBenefitAnnual, color: "bg-emerald-500" },
-                  { label: "Provisioning Time Savings", val: model.sourceTime, color: "bg-amber-500" },
-                  { label: "Risk Incident Avoidance", val: model.riskBenefitAnnual, color: "bg-teal-500" },
-                  { label: "Password Reset Savings", val: model.sourcePwd, color: "bg-amber-600" },
-                  { label: "Audit Effort Reduction", val: model.sourceAudit, color: "bg-amber-400" },
-                ].map((item, idx) => {
-                  const totalB = model.prodBenefitAnnual + model.sourceTime + model.riskBenefitAnnual + model.sourcePwd + model.sourceAudit || 1;
-                  const pct = (item.val / totalB) * 100;
-                  return (
-                    <div key={idx} className="space-y-1">
-                      <div className="flex justify-between text-xs text-neutral-700 dark:text-neutral-300">
-                        <span className="flex items-center gap-1.5">
-                          <span className={`size-2 rounded-full ${item.color}`} />
-                          <span>{item.label}</span>
-                        </span>
-                        <span className="font-mono">{formatUSD(item.val)} ({pct.toFixed(0)}%)</span>
-                      </div>
-                      <div className="w-full h-1.5 rounded-full bg-neutral-100 dark:bg-neutral-800 overflow-hidden">
-                        <div className={`h-full ${item.color}`} style={{ width: `${pct}%` }} />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Dynamic Insights Box */}
-            <div className="rounded-2xl border border-amber-500/20 bg-amber-50/50 dark:bg-amber-500/5 p-4">
-              <div className="flex items-center gap-2 text-xs font-bold text-amber-900 dark:text-amber-300 mb-2">
-                <LuLightbulb className="size-4 text-amber-600 dark:text-amber-400" />
-                <span>Key Analytical Insights</span>
-              </div>
-              <ul className="space-y-1 text-xs text-neutral-700 dark:text-neutral-300 list-disc list-inside">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-400 mb-3 flex items-center gap-1.5">
+                <LuLightbulb className="size-3.5 text-amber-600 dark:text-amber-400" />
+                Strategic Insights & Value Drivers
+              </h3>
+              <ul className="space-y-2 text-xs text-neutral-600 dark:text-neutral-300">
                 {model.insights.map((insight, idx) => (
-                  <li key={idx}>{insight}</li>
+                  <li key={idx} className="flex items-start gap-2">
+                    <span className="text-amber-600 dark:text-amber-400 font-bold shrink-0 mt-0.5">▪</span>
+                    <span className="leading-relaxed">{insight}</span>
+                  </li>
                 ))}
               </ul>
             </div>
           </div>
         </section>
 
-        {/* Detailed Financial Comparison Table (Bottom Area Kept Intact) */}
+        {/* Detailed Breakdown Table */}
         <section className="rounded-2xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-900/90 p-6 shadow-xs overflow-hidden">
           <div className="border-b border-neutral-200 dark:border-white/10 pb-4 mb-4">
             <h3 className="text-base font-bold text-neutral-900 dark:text-white">
-              Baseline vs. IDAM Solution Comparison
+              Detailed IDAM Economic Breakdown ({model.years}-Year Horizon)
             </h3>
             <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
-              Side-by-side assessment across operating expenses and multi-year savings realization.
+              Annualized and multi-year accounting comparison of baseline operational costs versus IDAM economics.
             </p>
           </div>
 
@@ -1110,66 +1210,54 @@ export default function IdamCalculatorPage() {
             <table className="w-full text-left text-xs border-collapse">
               <thead>
                 <tr className="border-b border-neutral-200 dark:border-white/10 text-neutral-500 dark:text-neutral-400 font-semibold uppercase tracking-wider text-[11px]">
-                  <th className="py-3 px-4">Cost / Benefit Component</th>
-                  <th className="py-3 px-4 text-right">Annual Baseline</th>
-                  <th className="py-3 px-4 text-right">With IDAM (Annual)</th>
-                  <th className="py-3 px-4 text-right">{model.years}-Year Total</th>
+                  <th className="py-3 px-4">Financial Driver</th>
+                  <th className="py-3 px-4 text-right">Annual Baseline ({currency})</th>
+                  <th className="py-3 px-4 text-right">Annual With IDAM ({currency})</th>
+                  <th className="py-3 px-4 text-right">{model.years}-Year Net Impact</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-100 dark:divide-white/5 text-neutral-700 dark:text-neutral-300">
                 <tr>
-                  <td className="py-3 px-4 font-medium text-neutral-900 dark:text-white">Access Request Operations Effort</td>
-                  <td className="py-3 px-4 text-right font-mono text-rose-600 dark:text-rose-400">{formatUSD(model.baselineAccessOps)}</td>
-                  <td className="py-3 px-4 text-right font-mono">{formatUSD(model.withAccessOps)}</td>
-                  <td className="py-3 px-4 text-right font-mono text-emerald-600 dark:text-emerald-400">+{formatUSD(model.sourceTime * model.years)} saved</td>
+                  <td className="py-3 px-4 font-medium text-neutral-900 dark:text-white">Access Provisioning Ops</td>
+                  <td className="py-3 px-4 text-right font-mono text-rose-600 dark:text-rose-400">{formatMoney(model.baselineAccessOps)}</td>
+                  <td className="py-3 px-4 text-right font-mono">{formatMoney(model.withAccessOps)}</td>
+                  <td className="py-3 px-4 text-right font-mono text-emerald-600 dark:text-emerald-400">+{formatMoney((model.baselineAccessOps - model.withAccessOps) * model.years)}</td>
                 </tr>
                 <tr>
-                  <td className="py-3 px-4 font-medium text-neutral-900 dark:text-white">Password Reset Helpdesk Costs</td>
-                  <td className="py-3 px-4 text-right font-mono text-rose-600 dark:text-rose-400">{formatUSD(model.baselinePwd)}</td>
-                  <td className="py-3 px-4 text-right font-mono">{formatUSD(model.withPwd)}</td>
-                  <td className="py-3 px-4 text-right font-mono text-emerald-600 dark:text-emerald-400">+{formatUSD(model.sourcePwd * model.years)} saved</td>
+                  <td className="py-3 px-4 font-medium text-neutral-900 dark:text-white">Helpdesk Password Resets</td>
+                  <td className="py-3 px-4 text-right font-mono text-rose-600 dark:text-rose-400">{formatMoney(model.baselinePwd)}</td>
+                  <td className="py-3 px-4 text-right font-mono">{formatMoney(model.withPwd)}</td>
+                  <td className="py-3 px-4 text-right font-mono text-emerald-600 dark:text-emerald-400">+{formatMoney((model.baselinePwd - model.withPwd) * model.years)}</td>
                 </tr>
                 <tr>
-                  <td className="py-3 px-4 font-medium text-neutral-900 dark:text-white">Audit & Access Certification Reviews</td>
-                  <td className="py-3 px-4 text-right font-mono text-rose-600 dark:text-rose-400">{formatUSD(model.baselineAudit)}</td>
-                  <td className="py-3 px-4 text-right font-mono">{formatUSD(model.withAudit)}</td>
-                  <td className="py-3 px-4 text-right font-mono text-emerald-600 dark:text-emerald-400">+{formatUSD(model.sourceAudit * model.years)} saved</td>
+                  <td className="py-3 px-4 font-medium text-neutral-900 dark:text-white">Compliance Audit Preparation</td>
+                  <td className="py-3 px-4 text-right font-mono text-rose-600 dark:text-rose-400">{formatMoney(model.baselineAudit)}</td>
+                  <td className="py-3 px-4 text-right font-mono">{formatMoney(model.withAudit)}</td>
+                  <td className="py-3 px-4 text-right font-mono text-emerald-600 dark:text-emerald-400">+{formatMoney((model.baselineAudit - model.withAudit) * model.years)}</td>
                 </tr>
                 <tr>
-                  <td className="py-3 px-4 font-medium text-neutral-900 dark:text-white">Software Licenses & Maintenance</td>
-                  <td className="py-3 px-4 text-right font-mono">$0</td>
-                  <td className="py-3 px-4 text-right font-mono">{formatUSD(inputs.licenseAnnual + inputs.supportAnnual)}</td>
-                  <td className="py-3 px-4 text-right font-mono">{formatUSD((inputs.licenseAnnual + inputs.supportAnnual) * model.years)}</td>
+                  <td className="py-3 px-4 font-medium text-neutral-900 dark:text-white">Non-Human Identity (NHI) Protection</td>
+                  <td className="py-3 px-4 text-right font-mono text-rose-600 dark:text-rose-400">{formatMoney(inputs.nhiRiskLossAnnual)}</td>
+                  <td className="py-3 px-4 text-right font-mono">{formatMoney(inputs.nhiRiskLossAnnual - model.nhiBenefitAnnual)}</td>
+                  <td className="py-3 px-4 text-right font-mono text-emerald-600 dark:text-emerald-400">+{formatMoney(model.nhiBenefitAnnual * model.years)}</td>
                 </tr>
                 <tr>
-                  <td className="py-3 px-4 font-medium text-neutral-900 dark:text-white">Dedicated Admin / Operations FTE</td>
-                  <td className="py-3 px-4 text-right font-mono">$0</td>
-                  <td className="py-3 px-4 text-right font-mono">{formatUSD(model.adminAnnual)}</td>
-                  <td className="py-3 px-4 text-right font-mono">{formatUSD(model.adminAnnual * model.years)}</td>
-                </tr>
-                <tr>
-                  <td className="py-3 px-4 font-medium text-neutral-900 dark:text-white">Implementation & Change Management (One-time)</td>
-                  <td className="py-3 px-4 text-right font-mono">$0</td>
-                  <td className="py-3 px-4 text-right font-mono">{formatUSD(model.oneTime)}</td>
-                  <td className="py-3 px-4 text-right font-mono">{formatUSD(model.oneTime)}</td>
-                </tr>
-                <tr className="bg-neutral-50/60 dark:bg-white/[0.02] font-semibold text-neutral-900 dark:text-white">
-                  <td className="py-3 px-4">Workforce Productivity Value Added</td>
+                  <td className="py-3 px-4 font-medium text-neutral-900 dark:text-white">Software License & Support</td>
                   <td className="py-3 px-4 text-right font-mono">—</td>
-                  <td className="py-3 px-4 text-right font-mono text-emerald-600 dark:text-emerald-400">+{formatUSD(model.prodBenefitAnnual)}/yr</td>
-                  <td className="py-3 px-4 text-right font-mono text-emerald-600 dark:text-emerald-400">+{formatUSD(model.prodBenefitAnnual * model.years)}</td>
+                  <td className="py-3 px-4 text-right font-mono">{formatMoney(inputs.licenseAnnual + inputs.supportAnnual)}</td>
+                  <td className="py-3 px-4 text-right font-mono text-neutral-500">-{formatMoney((inputs.licenseAnnual + inputs.supportAnnual) * model.years)}</td>
                 </tr>
-                <tr className="bg-neutral-50/60 dark:bg-white/[0.02] font-semibold text-neutral-900 dark:text-white">
-                  <td className="py-3 px-4">Risk Incident Expected Loss Avoidance</td>
+                <tr>
+                  <td className="py-3 px-4 font-medium text-neutral-900 dark:text-white">One-Time Implementation & Training</td>
                   <td className="py-3 px-4 text-right font-mono">—</td>
-                  <td className="py-3 px-4 text-right font-mono text-teal-600 dark:text-teal-400">+{formatUSD(model.riskBenefitAnnual)}/yr</td>
-                  <td className="py-3 px-4 text-right font-mono text-teal-600 dark:text-teal-400">+{formatUSD(model.riskBenefitAnnual * model.years)}</td>
+                  <td className="py-3 px-4 text-right font-mono">{formatMoney(model.oneTime)}</td>
+                  <td className="py-3 px-4 text-right font-mono text-neutral-500">-{formatMoney(model.oneTime)}</td>
                 </tr>
                 <tr className="border-t border-neutral-200 dark:border-white/10 bg-amber-500/5 dark:bg-amber-500/10 font-bold text-amber-900 dark:text-amber-300">
-                  <td className="py-3 px-4">Net Economic Benefit</td>
-                  <td className="py-3 px-4 text-right font-mono">{formatUSD(model.baselineAnnual)}</td>
-                  <td className="py-3 px-4 text-right font-mono">{formatUSD(model.annualNet)}</td>
-                  <td className="py-3 px-4 text-right font-mono">{formatUSD(model.netBenefit)}</td>
+                  <td className="py-3 px-4">Net Economic Benefit / ROI</td>
+                  <td className="py-3 px-4 text-right font-mono">{formatMoney(model.baselineAnnual)}</td>
+                  <td className="py-3 px-4 text-right font-mono">{formatMoney(model.solutionOpexAnnual)}</td>
+                  <td className="py-3 px-4 text-right font-mono text-emerald-600 dark:text-emerald-400">+{formatMoney(model.netBenefit)} ({formatPercent(model.roi)})</td>
                 </tr>
               </tbody>
             </table>
@@ -1181,5 +1269,19 @@ export default function IdamCalculatorPage() {
         <Footer />
       </div>
     </div>
+  );
+}
+
+export default function IdamCalculatorPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-neutral-50 dark:bg-neutral-950 text-neutral-600 dark:text-neutral-400">
+          Loading IDAM ROI Calculator...
+        </div>
+      }
+    >
+      <IdamCalculatorContent />
+    </Suspense>
   );
 }

@@ -41,3 +41,7 @@ yarn-error.log*
 next-env.d.ts
 
 credentials
+
+# local engineering notes & prompt audit
+.notes/
+.notes/prompt-overview.txt

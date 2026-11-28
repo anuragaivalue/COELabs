@@ -97,7 +97,10 @@ export function Navbar() {
   const isOemActive = pathname === "/oem";
   const isCustomerActive = pathname === "/customer";
   const isPartnersActive = pathname === "/partners";
-  const isMultiStacksActive = pathname.startsWith("/stack");
+  const isMultiStacksActive =
+    pathname.startsWith("/stack") ||
+    pathname === "/technology-stacks" ||
+    pathname === "/vertical-stacks";
   const isMarketplaceActive = pathname?.startsWith("/portal/marketplace");
   const isLoginActive = pathname === "/login" || pathname === "/loginWithOutlook";
 
@@ -215,10 +218,17 @@ export function Navbar() {
 
                     {/* Column 1: Technology Stacks */}
                     <div>
-                      <div className="mb-2.5 flex items-center gap-1.5 px-2 text-[11px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400">
-                        <Cpu className="size-3.5" />
-                        <span>Technology Stacks</span>
-                      </div>
+                      <Link
+                        href="/technology-stacks"
+                        onClick={() => setActiveDropdown(null)}
+                        className="mb-2.5 flex items-center justify-between px-2 text-[11px] font-bold uppercase tracking-wider text-amber-700 hover:text-amber-800 dark:text-amber-400 dark:hover:text-amber-300 transition-colors"
+                      >
+                        <div className="flex items-center gap-1.5">
+                          <Cpu className="size-3.5" />
+                          <span>Technology Stacks</span>
+                        </div>
+                        <ArrowRight className="size-3" />
+                      </Link>
                       <div className="space-y-1">
                         {techStacks.map((item, idx) => (
                           <a
@@ -243,10 +253,17 @@ export function Navbar() {
 
                     {/* Column 2: Vertical Stacks */}
                     <div>
-                      <div className="mb-2.5 flex items-center gap-1.5 px-2 text-[11px] font-bold uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
-                        <Building2 className="size-3.5" />
-                        <span>Vertical Stacks</span>
-                      </div>
+                      <Link
+                        href="/vertical-stacks"
+                        onClick={() => setActiveDropdown(null)}
+                        className="mb-2.5 flex items-center justify-between px-2 text-[11px] font-bold uppercase tracking-wider text-neutral-600 hover:text-amber-700 dark:text-neutral-400 dark:hover:text-amber-300 transition-colors"
+                      >
+                        <div className="flex items-center gap-1.5">
+                          <Building2 className="size-3.5" />
+                          <span>Vertical Stacks</span>
+                        </div>
+                        <ArrowRight className="size-3" />
+                      </Link>
                       <div className="space-y-1 max-h-[280px] overflow-y-auto pr-1 custom-gold-scrollbar">
                         {verticalStacks.map((item, idx) => (
                           <a
@@ -272,16 +289,35 @@ export function Navbar() {
                   </div>
 
                   {/* Dropdown Footer */}
-                  <div className="mt-3 pt-3 border-t border-neutral-100 dark:border-white/10 flex items-center justify-between text-[11px] px-2">
+                  <div className="mt-3 pt-3 border-t border-neutral-100 dark:border-white/10 flex flex-col sm:flex-row sm:items-center justify-between text-[11px] px-2 gap-2">
                     <span className="text-neutral-400">34 Validated Multistack Blueprints</span>
-                    <Link
-                      href="/#values"
-                      onClick={() => setActiveDropdown(null)}
-                      className="font-semibold text-amber-700 hover:text-amber-800 dark:text-amber-400 dark:hover:text-amber-300 inline-flex items-center gap-1"
-                    >
-                      <span>Explore all 34+ solution stacks</span>
-                      <ArrowRight className="size-3" />
-                    </Link>
+                    <div className="flex items-center gap-2">
+                      <Link
+                        href="/technology-stacks"
+                        onClick={() => setActiveDropdown(null)}
+                        className="font-semibold text-amber-700 hover:text-amber-800 dark:text-amber-400 dark:hover:text-amber-300 inline-flex items-center gap-1"
+                      >
+                        <span>Tech Suite</span>
+                        <ArrowRight className="size-3" />
+                      </Link>
+                      <span className="text-neutral-300 dark:text-neutral-700">•</span>
+                      <Link
+                        href="/vertical-stacks"
+                        onClick={() => setActiveDropdown(null)}
+                        className="font-semibold text-amber-700 hover:text-amber-800 dark:text-amber-400 dark:hover:text-amber-300 inline-flex items-center gap-1"
+                      >
+                        <span>Vertical Suite</span>
+                        <ArrowRight className="size-3" />
+                      </Link>
+                      <span className="text-neutral-300 dark:text-neutral-700">•</span>
+                      <Link
+                        href="/#values"
+                        onClick={() => setActiveDropdown(null)}
+                        className="text-neutral-500 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-200 inline-flex items-center gap-1"
+                      >
+                        <span>All 34+</span>
+                      </Link>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -656,6 +692,13 @@ export function Navbar() {
                       {s.label}
                     </a>
                   ))}
+                  <Link
+                    href="/technology-stacks"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="block py-1 text-xs font-bold text-amber-700 dark:text-amber-400 hover:underline"
+                  >
+                    → Explore All Technology Stacks
+                  </Link>
                   <span className="block text-[10px] font-bold uppercase tracking-wider text-neutral-400 pt-2">
                     Vertical Stacks
                   </span>
@@ -669,6 +712,13 @@ export function Navbar() {
                       {s.label}
                     </a>
                   ))}
+                  <Link
+                    href="/vertical-stacks"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="block py-1 text-xs font-bold text-amber-700 dark:text-amber-400 hover:underline"
+                  >
+                    → Explore All Vertical Stacks
+                  </Link>
                 </div>
               )}
             </div>

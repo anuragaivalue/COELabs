@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import Link from "next/link";
 import {
   LuSparkles,
@@ -14,13 +14,22 @@ import {
   LuShieldCheck,
   LuCircleAlert,
   LuInfo,
-  LuCalendar
+  LuCalendar,
+  LuCalculator
 } from "react-icons/lu";
+import { formatCurrency } from "@/lib/currency";
 
 export const MULTIPLIER_LIST = [
   { slug: "ztnamultiplier", label: "Zero Trust (ZTNA)", short: "ZTNA" },
   { slug: "SoCmultiplier", label: "SoC Multiplier", short: "SoC" },
+  { slug: "cloudsecuritymultiplier", label: "Cloud Security (CNAPP)", short: "Cloud Sec" },
+  { slug: "datasecuritymultiplier", label: "Data Security (DSPM)", short: "Data Sec" },
+  { slug: "appsecmultiplier", label: "Application Security", short: "AppSec" },
+  { slug: "cyberresiliencemultiplier", label: "Cyber Resilience", short: "Resilience" },
   { slug: "bfsimultiplier", label: "BFSI Multiplier", short: "BFSI" },
+  { slug: "healthcaremultiplier", label: "Healthcare", short: "Healthcare" },
+  { slug: "telecommultiplier", label: "Telecom & 5G", short: "Telecom" },
+  { slug: "govmultiplier", label: "Government", short: "Government" },
   { slug: "digitalnativesmultiplier", label: "Digital Natives", short: "Digital Natives" },
   { slug: "energymultiplier", label: "Energy & Power", short: "Energy & Power" },
   { slug: "enterprisemultiplier", label: "Enterprise", short: "Enterprise" },
@@ -31,13 +40,22 @@ export const MULTIPLIER_LIST = [
   { slug: "pharmamultiplier", label: "Pharma", short: "Pharma" }
 ];
 
-function formatCurrencyK(k) {
+export const CALCULATOR_MAP = {
+  socmultiplier: "/calculator/soc",
+  idammultiplier: "/calculator/idam",
+  ztnamultiplier: "/calculator/ztna",
+  cloudsecuritymultiplier: "/calculator/cnapp",
+  datasecuritymultiplier: "/calculator/dpdp",
+  cyberresiliencemultiplier: "/calculator/resilience"
+};
+
+function formatStackCurrency(k, curr = "USD") {
   const n = Number(k || 0);
-  if (!Number.isFinite(n) || n === 0) return "$0";
+  if (!Number.isFinite(n) || n === 0) {
+    return curr === "INR" ? "₹0" : "$0";
+  }
   const dollars = n * 1000;
-  return dollars >= 1_000_000
-    ? `$${(dollars / 1_000_000).toFixed(2)}M`
-    : `$${Math.round(dollars / 1000)}K`;
+  return formatCurrency(dollars, curr, true);
 }
 
 export function MultiplierView({ data }) {
@@ -70,27 +88,6 @@ export function MultiplierView({ data }) {
 
   const [anchorKey, setAnchorKey] = useState(null);
 
-  // Reset domain state if data changes
-  useEffect(() => {
-    if (isDomain && data.domains) {
-      const map = {};
-      Object.keys(data.domains).forEach((cat) => {
-        data.domains[cat].forEach((cap) => {
-          map[`${cat}::${cap}`] = {
-            category: cat,
-            capability: cap,
-            pricek: 50,
-            selected: false
-          };
-        });
-      });
-      const firstCat = Object.keys(data.domains)[0];
-      setActiveDomain(firstCat || "");
-      setDomainState(map);
-      setAnchorKey(null);
-    }
-  }, [isDomain, data]);
-
   // ===================== GRID MULTIPLIER STATE =====================
   const [gridCaps, setGridCaps] = useState(() => {
     if (!isDomain && data.capabilities) {
@@ -105,19 +102,8 @@ export function MultiplierView({ data }) {
     return [];
   });
 
-  useEffect(() => {
-    if (!isDomain && data.capabilities) {
-      setGridCaps(
-        data.capabilities.map((c) => ({
-          name: c.name,
-          pricek: c.price || 50,
-          desc: c.desc || "",
-          isAnchor: false,
-          selected: false
-        }))
-      );
-    }
-  }, [isDomain, data]);
+  // ===================== CURRENCY STATE =====================
+  const [currency, setCurrency] = useState("USD"); // "USD" | "INR"
 
   // ===================== COPY FEEDBACK =====================
   const [copied, setCopied] = useState(false);
@@ -190,6 +176,12 @@ export function MultiplierView({ data }) {
   }, [isDomain, gridCaps, data.tips, data.anchor]);
 
   const results = isDomain ? domainResults : gridResults;
+
+  // ROI Calculator cross-page handoff URL
+  const slugKey = String(data?.slug || "").toLowerCase();
+  const matchingCalculator = CALCULATOR_MAP[slugKey] || "/calculator";
+  const totalK = results ? Math.round(results.totalK) : 0;
+  const roiHref = `${matchingCalculator}?investment=${totalK}&currency=${currency}`;
 
   // ===================== HANDLERS: DOMAIN =====================
   const handleDomainPriceChange = (key, value) => {
@@ -270,10 +262,15 @@ export function MultiplierView({ data }) {
         : "—"
       : data.anchor || "—";
 
-    const text = `${data.title} | Anchor: ${anchorName} (${formatCurrencyK(
-      results.baselineK
-    )}) | Add-ons: ${formatCurrencyK(results.addK)} | Total: ${formatCurrencyK(
-      results.totalK
+    const text = `${data.title} | Currency: ${currency} | Anchor: ${anchorName} (${formatStackCurrency(
+      results.baselineK,
+      currency
+    )}) | Add-ons: ${formatStackCurrency(
+      results.addK,
+      currency
+    )} | Total: ${formatStackCurrency(
+      results.totalK,
+      currency
     )} | Multiplier: ${
       results.baselineK > 0 ? results.mult.toFixed(2) + "x" : "—"
     } | Selected (${results.count}): ${names.join(", ")}`;
@@ -358,8 +355,34 @@ export function MultiplierView({ data }) {
               </p>
             </div>
 
-            {/* Header Action Buttons */}
-            <div className="flex items-center gap-2.5 shrink-0 self-start sm:self-auto">
+            {/* Header Action Buttons & Currency Toggle */}
+            <div className="flex flex-wrap items-center gap-2.5 shrink-0 self-start sm:self-auto">
+              {/* Currency Toggle */}
+              <div className="inline-flex items-center rounded-xl border border-neutral-300 dark:border-white/10 bg-neutral-100 dark:bg-neutral-800 p-0.5 shadow-xs">
+                <button
+                  type="button"
+                  onClick={() => setCurrency("USD")}
+                  className={`rounded-lg px-2.5 py-1.5 text-xs font-bold transition-all cursor-pointer ${
+                    currency === "USD"
+                      ? "bg-white dark:bg-neutral-900 text-amber-700 dark:text-amber-400 shadow-xs"
+                      : "text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white"
+                  }`}
+                >
+                  USD ($)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCurrency("INR")}
+                  className={`rounded-lg px-2.5 py-1.5 text-xs font-bold transition-all cursor-pointer ${
+                    currency === "INR"
+                      ? "bg-white dark:bg-neutral-900 text-amber-700 dark:text-amber-400 shadow-xs"
+                      : "text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white"
+                  }`}
+                >
+                  INR (₹)
+                </button>
+              </div>
+
               <button
                 type="button"
                 onClick={isDomain ? handleResetDomain : handleResetGrid}
@@ -673,21 +696,21 @@ export function MultiplierView({ data }) {
               <div className="flex items-center justify-between">
                 <span className="text-neutral-600 dark:text-neutral-400">Core / Anchor Baseline:</span>
                 <span className="font-bold text-neutral-900 dark:text-white font-mono text-sm">
-                  {results && results.baselineK > 0 ? formatCurrencyK(results.baselineK) : "—"}
+                  {results && results.baselineK > 0 ? formatStackCurrency(results.baselineK, currency) : "—"}
                 </span>
               </div>
 
               <div className="flex items-center justify-between">
                 <span className="text-neutral-600 dark:text-neutral-400">Attached Add-ons:</span>
                 <span className="font-bold text-neutral-900 dark:text-white font-mono text-sm">
-                  {results && results.baselineK > 0 ? formatCurrencyK(results.addK) : "—"}
+                  {results && results.baselineK > 0 ? formatStackCurrency(results.addK, currency) : "—"}
                 </span>
               </div>
 
               <div className="pt-3 border-t border-neutral-200 dark:border-white/10 flex items-center justify-between">
                 <span className="font-bold text-neutral-900 dark:text-white">Total Stack Value:</span>
                 <span className="text-base sm:text-lg font-extrabold text-amber-700 dark:text-amber-400 font-mono">
-                  {results && results.baselineK > 0 ? formatCurrencyK(results.totalK) : "—"}
+                  {results && results.baselineK > 0 ? formatStackCurrency(results.totalK, currency) : "—"}
                 </span>
               </div>
 
@@ -712,10 +735,18 @@ export function MultiplierView({ data }) {
 
             {/* Actions */}
             <div className="flex flex-col gap-2.5 pt-1">
+              <Link
+                href={roiHref}
+                className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-600 to-amber-700 py-3 text-xs sm:text-sm font-bold text-white shadow-md hover:from-amber-700 hover:to-amber-800 transition-all text-center group cursor-pointer"
+              >
+                <LuCalculator className="size-4 transition-transform group-hover:scale-110" />
+                <span>Build Executive ROI Case</span>
+              </Link>
+
               <button
                 type="button"
                 onClick={handleCopy}
-                className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-amber-600 py-3 text-xs sm:text-sm font-semibold text-white shadow-md hover:bg-amber-700 transition-all cursor-pointer"
+                className="w-full inline-flex items-center justify-center gap-2 rounded-xl border border-neutral-300 dark:border-white/10 bg-white dark:bg-neutral-800/80 py-2.5 text-xs sm:text-sm font-semibold text-neutral-800 dark:text-neutral-200 shadow-xs hover:border-amber-500 hover:text-amber-700 dark:hover:text-amber-400 transition-all cursor-pointer"
               >
                 {copied ? <LuCheck className="size-4" /> : <LuCopy className="size-4" />}
                 <span>{copied ? "Copied to Clipboard!" : "Copy Executive Summary"}</span>
@@ -723,7 +754,7 @@ export function MultiplierView({ data }) {
 
               <Link
                 href="/contact?type=enterprise"
-                className="w-full inline-flex items-center justify-center gap-2 rounded-xl border border-neutral-300 dark:border-white/10 bg-neutral-50/60 dark:bg-neutral-800/60 py-3 text-xs sm:text-sm font-semibold text-neutral-800 dark:text-neutral-200 hover:border-amber-500 hover:text-amber-700 dark:hover:text-amber-400 transition-all text-center"
+                className="w-full inline-flex items-center justify-center gap-2 rounded-xl border border-neutral-300 dark:border-white/10 bg-neutral-50/60 dark:bg-neutral-800/60 py-2.5 text-xs sm:text-sm font-semibold text-neutral-800 dark:text-neutral-200 hover:border-amber-500 hover:text-amber-700 dark:hover:text-amber-400 transition-all text-center"
               >
                 <LuCalendar className="size-4 text-amber-600" />
                 <span>Request Custom Architecture Sizing</span>

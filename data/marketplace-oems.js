@@ -99,7 +99,8 @@ export const MARKETPLACE_OEMS = [
     id: "datadog",
     name: "Datadog",
     category: "Cloud Observability",
-    logo: "https://cdn.ivaluetv.com/oem/datadog.svg",
+    logo: "/assets/img/oems/datadog.svg",
+    logoDark: "/assets/img/oems/datadog-dark.svg",
     color: "#632CA6",
     tagline: "Cloud infrastructure monitoring, APM & security telemetry",
     products: [
@@ -110,7 +111,8 @@ export const MARKETPLACE_OEMS = [
     id: "edb",
     name: "EDB",
     category: "Enterprise Database",
-    logo: "https://cdn.ivaluetv.com/oem/edb.png",
+    logo: "/assets/img/oems/edb.svg",
+    logoDark: "/assets/img/oems/edb-dark.svg",
     color: "#C22026",
     tagline: "Enterprise Postgres database high-availability and security",
     products: [
@@ -178,7 +180,8 @@ export const MARKETPLACE_OEMS = [
     id: "gambit-cyber",
     name: "Gambit Cyber",
     category: "Threat Management",
-    logo: "https://cdn.ivaluetv.com/oem/gambit.svg",
+    logo: "/assets/img/oems/gambit-cyber.svg",
+    logoDark: "/assets/img/oems/gambit-cyber-dark.svg",
     color: "#8E44AD",
     tagline: "Proactive adversary emulation and attack surface reduction",
     products: [
@@ -298,7 +301,8 @@ export const MARKETPLACE_OEMS = [
     id: "virtuozzo",
     name: "Virtuozzo",
     category: "Hybrid Cloud Infrastructure",
-    logo: "https://cdn.ivaluetv.com/oem/virtuozzo.svg",
+    logo: "/assets/img/oems/virtuozzo.svg",
+    logoDark: "/assets/img/oems/virtuozzo-dark.svg",
     color: "#16A085",
     tagline: "High-density cloud virtualization, hyperconverged compute & storage",
     products: [

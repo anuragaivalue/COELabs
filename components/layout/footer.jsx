@@ -55,39 +55,54 @@ export function Footer() {
             </h4>
             <ul className="mt-4 space-y-2.5 text-xs text-neutral-600 dark:text-neutral-400 font-sans">
               <li>
-                <a href="/" className="hover:text-amber-600 dark:hover:text-orange-400 transition-colors">
+                <Link href="/" className="hover:text-amber-600 dark:hover:text-orange-400 transition-colors">
                   Home
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/oem" className="hover:text-amber-600 dark:hover:text-orange-400 transition-colors">
+                <Link href="/about-us" className="hover:text-amber-600 dark:hover:text-orange-400 transition-colors">
+                  About Us
+                </Link>
+              </li>
+              <li>
+                <Link href="/oem" className="hover:text-amber-600 dark:hover:text-orange-400 transition-colors">
                   Top OEM Directory
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/#values" className="hover:text-amber-600 dark:hover:text-orange-400 transition-colors">
+                <Link href="/#values" className="hover:text-amber-600 dark:hover:text-orange-400 transition-colors">
                   iValue Stacks
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/specialized-stacks" className="hover:text-amber-600 dark:hover:text-orange-400 transition-colors">
+                <Link href="/specialized-stacks" className="hover:text-amber-600 dark:hover:text-orange-400 transition-colors">
                   Specialized Stacks
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/advantages" className="hover:text-amber-600 dark:hover:text-orange-400 transition-colors">
+                <Link href="/advantages" className="hover:text-amber-600 dark:hover:text-orange-400 transition-colors">
                   iVCoE Advantages
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/news" className="hover:text-amber-600 dark:hover:text-orange-400 transition-colors">
+                <Link href="/news" className="hover:text-amber-600 dark:hover:text-orange-400 transition-colors">
                   Cyber Security News
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/contact" className="hover:text-amber-600 dark:hover:text-orange-400 transition-colors">
+                <Link href="/contact" className="hover:text-amber-600 dark:hover:text-orange-400 transition-colors">
                   Contact Us
-                </a>
+                </Link>
+              </li>
+              <li>
+                <Link href="/privacy-policy" className="hover:text-amber-600 dark:hover:text-orange-400 transition-colors">
+                  Privacy Policy
+                </Link>
+              </li>
+              <li>
+                <Link href="/terms-and-conditions" className="hover:text-amber-600 dark:hover:text-orange-400 transition-colors">
+                  Terms & Conditions
+                </Link>
               </li>
             </ul>
           </div>
@@ -99,29 +114,29 @@ export function Footer() {
             </h4>
             <ul className="mt-4 space-y-2.5 text-xs text-neutral-600 dark:text-neutral-400 font-sans">
               <li>
-                <a href="/stack/cloudSecurityControls" className="hover:text-amber-600 dark:hover:text-orange-400 transition-colors">
+                <Link href="/stack/cloudSecurityControls" className="hover:text-amber-600 dark:hover:text-orange-400 transition-colors">
                   Cloud Security Stack
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/stack/scoControls" className="hover:text-amber-600 dark:hover:text-orange-400 transition-colors">
+                <Link href="/stack/scoControls" className="hover:text-amber-600 dark:hover:text-orange-400 transition-colors">
                   SOC & Incident Response
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/stack/iamControls" className="hover:text-amber-600 dark:hover:text-orange-400 transition-colors">
+                <Link href="/stack/iamControls" className="hover:text-amber-600 dark:hover:text-orange-400 transition-colors">
                   Identity & Access (IAM)
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/stack/endpointControls" className="hover:text-amber-600 dark:hover:text-orange-400 transition-colors">
+                <Link href="/stack/endpointControls" className="hover:text-amber-600 dark:hover:text-orange-400 transition-colors">
                   Endpoint & XDR Stack
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/stack/BFSIControls" className="hover:text-amber-600 dark:hover:text-orange-400 transition-colors">
+                <Link href="/stack/BFSIControls" className="hover:text-amber-600 dark:hover:text-orange-400 transition-colors">
                   BFSI & Fintech Stacks
-                </a>
+                </Link>
               </li>
             </ul>
           </div>
@@ -163,7 +178,32 @@ export function Footer() {
 
         {/* Bottom Bar */}
         <div className="mt-14 flex flex-col items-center justify-between border-t border-neutral-200/80 pt-6 text-xs text-neutral-500 dark:border-white/10 dark:text-neutral-400 sm:flex-row font-sans gap-4">
-          <p>© 2026 iValue InfoSolutions Limited. All rights reserved.</p>
+          <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4">
+            <p>© 2026 iValue InfoSolutions Limited. All rights reserved.</p>
+            <span className="hidden sm:inline text-neutral-300 dark:text-neutral-700">•</span>
+            <div className="flex items-center gap-3">
+              <Link
+                href="/about-us"
+                className="hover:text-amber-600 dark:hover:text-orange-400 transition-colors"
+              >
+                About Us
+              </Link>
+              <span className="text-neutral-300 dark:text-neutral-700">•</span>
+              <Link
+                href="/privacy-policy"
+                className="hover:text-amber-600 dark:hover:text-orange-400 transition-colors"
+              >
+                Privacy Policy
+              </Link>
+              <span className="text-neutral-300 dark:text-neutral-700">•</span>
+              <Link
+                href="/terms-and-conditions"
+                className="hover:text-amber-600 dark:hover:text-orange-400 transition-colors"
+              >
+                Terms & Conditions
+              </Link>
+            </div>
+          </div>
 
           {/* Social Links from MAIN site */}
           <div className="flex items-center gap-4">

@@ -1,10 +1,13 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, Suspense } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
 import { CalculatorNav } from "@/components/calculators/calculator-nav";
+import { formatCurrency as formatCurrencyUtil, getCurrencySymbol } from "@/lib/currency";
+import { exportSectionsToCSV, triggerPrint } from "@/lib/export-utils";
 import {
   LuLock,
   LuRotateCcw,
@@ -15,7 +18,7 @@ import {
   LuSlidersHorizontal,
   LuDollarSign,
   LuPieChart,
-  LuBarChart3,
+  LuChartBar,
   LuCheckCircle2,
   LuAlertTriangle,
   LuLightbulb,
@@ -26,6 +29,9 @@ import {
   LuInfo,
   LuSparkles,
   LuLayers,
+  LuBot,
+  LuFileSpreadsheet,
+  LuKeyRound
 } from "react-icons/lu";
 
 const PAM_DEFAULTS = {
@@ -35,6 +41,13 @@ const PAM_DEFAULTS = {
   privAccounts: 1200,
   hourlyRate: 85,
   years: 3,
+
+  // Non-Human Identities (NHI) & Machine Secrets Vaulting (NEW!)
+  nhiMachineAccounts: 1800,
+  nhiSecretsCount: 4500,
+  nhiManualHoursMonth: 45,
+  nhiBreachExposureAnnual: 350000,
+  nhiVaultingReductionPct: 75,
 
   // Current State Costs (Before PAM)
   resetsPerMonth: 120,
@@ -84,25 +97,29 @@ const INDUSTRIES = [
   "Government & Public Sector",
 ];
 
-function pamFormatCurrency(val) {
-  if (!Number.isFinite(val)) return "$0";
-  const abs = Math.abs(val);
-  const sign = val < 0 ? "-" : "";
-  if (abs >= 1_000_000_000) return `${sign}$${(abs / 1_000_000_000).toFixed(2)}B`;
-  if (abs >= 1_000_000) return `${sign}$${(abs / 1_000_000).toFixed(2)}M`;
-  if (abs >= 1_000) return `${sign}$${(abs / 1_000).toFixed(1)}K`;
-  return `${sign}$${abs.toFixed(0)}`;
-}
+function PamCalculatorContent() {
+  const searchParams = useSearchParams();
+  const investmentParam = searchParams?.get("investment");
+  const currencyParam = searchParams?.get("currency");
 
-function pamFormatFullUSD(val) {
-  if (!Number.isFinite(val)) return "$0";
-  const sign = val < 0 ? "-" : "";
-  const abs = Math.abs(val);
-  return `${sign}$${abs.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
-}
+  const [inputs, setInputs] = useState(() => {
+    let base = { ...PAM_DEFAULTS };
+    if (investmentParam) {
+      const parsed = parseFloat(investmentParam);
+      if (!isNaN(parsed) && parsed > 0) {
+        base.pamLicenseAnnual = parsed < 10000 ? parsed * 1000 : parsed;
+      }
+    }
+    return base;
+  });
 
-export default function PamCalculatorPage() {
-  const [inputs, setInputs] = useState(PAM_DEFAULTS);
+  const [currency, setCurrency] = useState(() =>
+    currencyParam?.toUpperCase() === "INR" ? "INR" : "USD"
+  );
+
+  const formatMoney = (val, compact = false) => {
+    return formatCurrencyUtil(val, currency, compact);
+  };
 
   const handleInputChange = (field, val) => {
     if (field === "industry") {
@@ -121,10 +138,10 @@ export default function PamCalculatorPage() {
   };
 
   const handlePrint = () => {
-    window.print();
+    triggerPrint();
   };
 
-  // Exact math from scratch/pam_logic.js
+  // Exact math with NHI Privileged Machine Secrets Vaulting integration
   const calc = useMemo(() => {
     const years = Math.min(5, Math.max(1, inputs.years));
     const hourlyRate = Math.max(0, inputs.hourlyRate);
@@ -142,6 +159,10 @@ export default function PamCalculatorPage() {
     const orphanedAccountRiskCost = orphanedAccounts * inputs.orphanedHoursFactor * hourlyRate;
     const complianceExpectedLoss = inputs.complianceExposure;
 
+    // NHI Machine Secrets & Workload Credentials
+    const nhiManualRotationCost = (inputs.nhiManualHoursMonth * 12) * hourlyRate;
+    const nhiBreachLoss = inputs.nhiBreachExposureAnnual;
+
     const totalCurrentAnnual =
       passwordResetCost +
       provisioningCost +
@@ -150,7 +171,9 @@ export default function PamCalculatorPage() {
       credentialIncidentExpectedLoss +
       insiderExpectedLoss +
       orphanedAccountRiskCost +
-      complianceExpectedLoss;
+      complianceExpectedLoss +
+      nhiManualRotationCost +
+      nhiBreachLoss;
 
     // PAM costs
     const newAnnualPAMCost = inputs.pamLicenseAnnual + inputs.supportAnnual + inputs.sessionStorageAnnual;
@@ -168,6 +191,11 @@ export default function PamCalculatorPage() {
     const orphanedSavings = orphanedAccountRiskCost * (inputs.orphanedCleanup / 100);
     const complianceSavings = complianceExpectedLoss * (inputs.complianceReduction / 100);
 
+    // NHI Vaulting Benefits
+    const nhiRotationSavings = nhiManualRotationCost * (inputs.nhiVaultingReductionPct / 100);
+    const nhiRiskSavings = nhiBreachLoss * (inputs.nhiVaultingReductionPct / 100);
+    const nhiTotalSavings = nhiRotationSavings + nhiRiskSavings;
+
     const totalAnnualBenefits =
       resetSavings +
       provisioningSavings +
@@ -176,14 +204,15 @@ export default function PamCalculatorPage() {
       credRiskSavings +
       insiderRiskSavings +
       orphanedSavings +
-      complianceSavings;
+      complianceSavings +
+      nhiTotalSavings;
 
     const annualNetBenefit = totalAnnualBenefits - newAnnualPAMCost;
     const totalBenefits = totalAnnualBenefits * years;
     const netBenefit = totalBenefits - totalInvestment;
     const roiPct = totalInvestment > 0 ? (netBenefit / totalInvestment) * 100 : 0;
     const paybackMonths = annualNetBenefit > 0 ? year1Investment / (annualNetBenefit / 12) : null;
-    const riskReductionAnnualValue = credRiskSavings + insiderRiskSavings;
+    const riskReductionAnnualValue = credRiskSavings + insiderRiskSavings + nhiRiskSavings;
 
     // Yearly cost and benefit arrays for chart
     const yearlyCosts = Array.from({ length: years }, (_, i) => newAnnualPAMCost + (i === 0 ? oneTime : 0));
@@ -209,6 +238,11 @@ export default function PamCalculatorPage() {
       insiderExpectedLoss,
       orphanedAccountRiskCost,
       complianceExpectedLoss,
+      nhiManualRotationCost,
+      nhiBreachLoss,
+      nhiRotationSavings,
+      nhiRiskSavings,
+      nhiTotalSavings,
       totalCurrentAnnual,
       newAnnualPAMCost,
       oneTime,
@@ -236,6 +270,62 @@ export default function PamCalculatorPage() {
     };
   }, [inputs]);
 
+  // Handle CSV Export
+  const handleExportCSV = () => {
+    const sections = [
+      {
+        title: "Executive Readout & Return Metrics",
+        items: [
+          ["Currency", currency, ""],
+          ["Industry Vertical", inputs.industry, ""],
+          ["Time Horizon", `${calc.years} Years`, ""],
+          ["Total ROI (%)", `${calc.roiPct.toFixed(1)}%`, "Net return vs total investment"],
+          ["Payback Period", calc.paybackMonths ? `${calc.paybackMonths.toFixed(1)} Months` : "N/A", "Break-even on Year 1 CapEx"],
+          ["Net Economic Benefit", formatMoney(calc.netBenefit), "Cumulative over horizon"],
+          ["Annual Net Benefit", formatMoney(calc.annualNetBenefit), "Ongoing annual net run-rate"],
+          ["Total Solution Investment", formatMoney(calc.totalInvestment), "CapEx + OpEx across horizon"],
+        ],
+      },
+      {
+        title: "NHI Privileged Machine Secrets Vaulting",
+        items: [
+          ["Privileged Machine Accounts", inputs.nhiMachineAccounts, "Service accounts, daemons & db users"],
+          ["Machine Secrets & Tokens", inputs.nhiSecretsCount, "SSH keys, API tokens & CI/CD secrets"],
+          ["Monthly Manual Rotation Hours", `${inputs.nhiManualHoursMonth} hrs/mo`, "DevOps/SecOps labor time"],
+          ["Annual NHI Breach Risk Exposure", formatMoney(inputs.nhiBreachExposureAnnual), "Risk from exposed machine credentials"],
+          ["Vaulting Risk & Toil Reduction", `${inputs.nhiVaultingReductionPct}%`, "Automated secret injection & rotation"],
+          ["Annual NHI Operational Savings", formatMoney(calc.nhiRotationSavings), "Reduced manual DevOps rotation labor"],
+          ["Annual NHI Risk Avoidance", formatMoney(calc.nhiRiskSavings), "Prevented machine credential breaches"],
+          ["Total Annual NHI Value", formatMoney(calc.nhiTotalSavings), "Combined operational & risk mitigation"],
+        ],
+      },
+      {
+        title: "Organization & Privileged Scope",
+        items: [
+          ["Total Employees", inputs.employees, ""],
+          ["Privileged Users (Admins)", inputs.privUsers, ""],
+          ["Privileged Accounts & Vaulted Assets", inputs.privAccounts, ""],
+          ["IT Admin Hourly Rate", formatMoney(inputs.hourlyRate), ""],
+          ["Current Pre-PAM Annual Exposure", formatMoney(calc.totalCurrentAnnual), ""],
+        ],
+      },
+      {
+        title: "PAM Solution Investment",
+        items: [
+          ["Annual Software License", formatMoney(inputs.pamLicenseAnnual), "Core PAM license"],
+          ["One-Time Implementation", formatMoney(inputs.implOneTime), "Professional services"],
+          ["One-Time Integration", formatMoney(inputs.integrationOneTime), "Active Directory & vault hooks"],
+          ["One-Time Training", formatMoney(inputs.trainingOneTime), "Admin certification"],
+          ["Annual Support & Updates", formatMoney(inputs.supportAnnual), "Maintenance & SLA"],
+          ["Session Recording Storage", formatMoney(inputs.sessionStorageAnnual), "Video & log storage"],
+          ["Total Year 1 CapEx & OpEx", formatMoney(calc.year1Investment), ""],
+        ],
+      },
+    ];
+
+    exportSectionsToCSV("pam-roi-analysis.csv", sections);
+  };
+
   // Line chart scaling
   const minCumPam = Math.min(...calc.cumulativeBenefit, -calc.oneTime, 0);
   const maxCumPam = Math.max(...calc.cumulativeBenefit, 1);
@@ -257,7 +347,7 @@ export default function PamCalculatorPage() {
             <LuChevronRight className="size-3.5" />
             <span>Accelerators</span>
             <LuChevronRight className="size-3.5" />
-            <span className="text-neutral-800 dark:text-neutral-200 font-medium">PAM ROI Calculator</span>
+            <span className="text-neutral-800 dark:text-neutral-200 font-medium">PAM ROI & NHI Secrets Calculator</span>
           </nav>
 
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-neutral-200 dark:border-white/10 pb-6">
@@ -267,22 +357,63 @@ export default function PamCalculatorPage() {
                 <span>Privileged Access Management</span>
               </div>
               <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight text-neutral-900 dark:text-white">
-                PAM ROI Calculator
+                PAM ROI & NHI Secrets Calculator
               </h1>
               <p className="mt-1.5 text-sm sm:text-base text-neutral-600 dark:text-neutral-400 max-w-3xl">
-                Quantify the return on investment, credential risk reduction, automated session management, and audit savings of deploying an enterprise Privileged Access Management solution.
+                Quantify the return on investment, credential risk reduction, Non-Human Identity (NHI) machine secrets vaulting, and compliance audit savings of enterprise PAM.
               </p>
             </div>
 
-            <div className="flex items-center gap-2 print:hidden shrink-0">
+            <div className="flex flex-wrap items-center gap-2 print:hidden shrink-0">
+              {/* Currency Toggle */}
+              <div className="inline-flex items-center rounded-xl border border-neutral-200 dark:border-white/15 bg-white dark:bg-neutral-900 p-1 shadow-2xs">
+                <button
+                  type="button"
+                  onClick={() => setCurrency("USD")}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    currency === "USD"
+                      ? "bg-amber-600 text-white shadow-xs"
+                      : "text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white"
+                  }`}
+                >
+                  USD ($)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCurrency("INR")}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    currency === "INR"
+                      ? "bg-amber-600 text-white shadow-xs"
+                      : "text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white"
+                  }`}
+                >
+                  INR (₹)
+                </button>
+              </div>
+
+              {/* Reset Defaults */}
               <button
+                type="button"
                 onClick={handleReset}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-medium rounded-lg border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-900 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-900 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
               >
                 <LuRotateCcw className="size-3.5" />
                 <span>Reset Defaults</span>
               </button>
+
+              {/* CSV Export */}
               <button
+                type="button"
+                onClick={handleExportCSV}
+                className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-900 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
+              >
+                <LuFileSpreadsheet className="size-3.5 text-emerald-600 dark:text-emerald-400" />
+                <span>Export CSV</span>
+              </button>
+
+              {/* Print / PDF Export */}
+              <button
+                type="button"
                 onClick={handlePrint}
                 className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-lg bg-amber-600 hover:bg-amber-700 text-white shadow-xs transition-colors cursor-pointer"
               >
@@ -302,12 +433,12 @@ export default function PamCalculatorPage() {
           <div className="space-y-1">
             <span className="font-bold text-amber-900 dark:text-amber-300">How this model works:</span>
             <p className="text-neutral-600 dark:text-neutral-400 leading-relaxed">
-              This calculator models the risk exposure of unmanaged privileged credentials, admin password resets, manual JIT elevation requests, and regulatory compliance audits. It calculates the net return from credential vaulting, session recording, and automated rotation across your target time horizon.
+              This calculator models the risk exposure of unmanaged privileged human credentials alongside <strong>Non-Human Identity (NHI) Machine Secrets</strong> (SSH keys, CI/CD tokens, daemon users). It calculates the net return from credential vaulting, automated rotation, session recording, and just-in-time access across your target time horizon.
             </p>
           </div>
         </div>
 
-        {/* Executive Readout (4 Core KPIs Readout - Kept Completely Intact) */}
+        {/* Executive Readout (4 Core KPIs Readout) */}
         <section className="mb-10" aria-label="PAM Return Metrics">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
@@ -316,9 +447,11 @@ export default function PamCalculatorPage() {
                 Projected PAM Value Drivers
               </h2>
             </div>
-            <span className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">
-              Industry: <span className="text-amber-700 dark:text-amber-400 font-bold">{inputs.industry}</span> • <span className="text-neutral-800 dark:text-neutral-200">{calc.years}-Year Horizon</span>
-            </span>
+            <div className="flex items-center gap-2 text-xs font-semibold text-neutral-500 dark:text-neutral-400">
+              <span>Industry: <strong className="text-amber-700 dark:text-amber-400">{inputs.industry}</strong></span>
+              <span>•</span>
+              <span>Currency: <strong className="text-amber-600 dark:text-orange-400">{currency} ({getCurrencySymbol(currency)})</strong></span>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -358,50 +491,50 @@ export default function PamCalculatorPage() {
                 <span className="text-xs font-medium text-neutral-500 dark:text-neutral-400">Net Benefit (Horizon)</span>
                 <span className="text-[10px] font-semibold text-neutral-400">Cumulative</span>
               </div>
-              <div className="mt-2 text-3xl font-extrabold text-emerald-600 dark:text-emerald-400">
-                {pamFormatCurrency(calc.netBenefit)}
+              <div className="mt-2 text-3xl font-extrabold text-emerald-600 dark:text-emerald-400 truncate">
+                {formatMoney(calc.netBenefit, true)}
               </div>
               <div className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-                Total benefits minus total investment
+                Total savings & risk reduction minus PAM cost
               </div>
             </div>
 
-            {/* Annual Risk Reduction Value */}
+            {/* Annual Net Run-Rate */}
             <div className="rounded-xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-900/80 p-5 shadow-xs">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-neutral-500 dark:text-neutral-400">Risk Reduction (Annual)</span>
-                <span className="text-[10px] font-semibold text-neutral-400">Expected Loss</span>
+                <span className="text-xs font-medium text-neutral-500 dark:text-neutral-400">Annual Net Benefit</span>
+                <span className="text-[10px] font-semibold text-neutral-400">Run-Rate</span>
               </div>
-              <div className="mt-2 text-3xl font-extrabold text-teal-600 dark:text-teal-400">
-                {pamFormatCurrency(calc.riskReductionAnnualValue)}
+              <div className="mt-2 text-3xl font-extrabold text-neutral-900 dark:text-white truncate">
+                {formatMoney(calc.annualNetBenefit, true)}
               </div>
               <div className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-                Credential + insider risk mitigation
+                Ongoing yearly benefit minus annual OpEx
               </div>
             </div>
           </div>
         </section>
 
-        {/* Main Workspace: Side-by-Side Split Architecture */}
+        {/* Main Grid: Inputs Left vs Charts Right */}
         <section className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start mb-12">
-          {/* LEFT COLUMN: Vertically Stacked Inputs */}
+          {/* LEFT: 6 Configuration Panels */}
           <div className="lg:col-span-7 space-y-6">
-            {/* Section 1: Organization Profile */}
+            {/* Panel 1: Organization & Privileged Scope */}
             <div className="rounded-2xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-900/90 p-6 shadow-xs">
               <div className="border-b border-neutral-200 dark:border-white/10 pb-3 mb-5">
                 <h3 className="text-base font-bold text-neutral-900 dark:text-white flex items-center gap-2">
-                  <LuBuilding2 className="size-5 text-amber-600 dark:text-amber-400" />
-                  Organization Profile (Scale Drivers)
+                  <span className="flex size-6 items-center justify-center rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-400 text-xs font-bold">1</span>
+                  Organization Profile & Scope
                 </h3>
                 <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
-                  Workforce size, privileged account inventory, and IT labor rates.
+                  General organizational parameters, workforce size, and internal hourly IT labor cost.
                 </p>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                    Industry Sector
+                    Industry Vertical
                   </label>
                   <select
                     value={inputs.industry}
@@ -409,30 +542,68 @@ export default function PamCalculatorPage() {
                     className="w-full rounded-lg border border-neutral-300 dark:border-white/15 bg-neutral-50/50 dark:bg-neutral-800/50 px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
                   >
                     {INDUSTRIES.map((ind) => (
-                      <option key={ind} value={ind}>{ind}</option>
+                      <option key={ind} value={ind}>
+                        {ind}
+                      </option>
                     ))}
                   </select>
-                  <p className="mt-1 text-[11px] text-neutral-400">Calibrates compliance risk weightings.</p>
+                  <p className="mt-1 text-[11px] text-neutral-400">Shapes default risk and compliance factors.</p>
                 </div>
 
                 <div>
                   <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                    Total Employees (Headcount)
+                    Analysis Horizon (Years)
+                  </label>
+                  <div className="flex gap-2">
+                    {[1, 2, 3, 4, 5].map((y) => (
+                      <button
+                        key={y}
+                        type="button"
+                        onClick={() => handleInputChange("years", y)}
+                        className={`flex-1 py-1.5 text-xs font-semibold rounded-lg border transition-all cursor-pointer ${
+                          inputs.years === y
+                            ? "bg-amber-600 text-white border-amber-600 shadow-2xs"
+                            : "border-neutral-200 dark:border-white/10 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                        }`}
+                      >
+                        {y}Y
+                      </button>
+                    ))}
+                  </div>
+                  <p className="mt-1 text-[11px] text-neutral-400">Investment return evaluation horizon.</p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+                    Total Enterprise Employees
                   </label>
                   <input
                     type="number"
-                    min="50"
-                    step="50"
+                    min="1"
                     value={inputs.employees}
                     onChange={(e) => handleInputChange("employees", e.target.value)}
                     className="w-full rounded-lg border border-neutral-300 dark:border-white/15 bg-neutral-50/50 dark:bg-neutral-800/50 px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
                   />
-                  <p className="mt-1 text-[11px] text-neutral-400">Full-time equivalent workforce.</p>
+                  <p className="mt-1 text-[11px] text-neutral-400">Total corporate headcount.</p>
                 </div>
 
                 <div>
                   <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                    Privileged Users
+                    IT Security Hourly Rate ({getCurrencySymbol(currency)}/hr)
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={inputs.hourlyRate}
+                    onChange={(e) => handleInputChange("hourlyRate", e.target.value)}
+                    className="w-full rounded-lg border border-neutral-300 dark:border-white/15 bg-neutral-50/50 dark:bg-neutral-800/50 px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
+                  />
+                  <p className="mt-1 text-[11px] text-neutral-400">Fully loaded rate for admin engineering hours.</p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+                    Privileged Users (Human Admins)
                   </label>
                   <input
                     type="number"
@@ -441,12 +612,12 @@ export default function PamCalculatorPage() {
                     onChange={(e) => handleInputChange("privUsers", e.target.value)}
                     className="w-full rounded-lg border border-neutral-300 dark:border-white/15 bg-neutral-50/50 dark:bg-neutral-800/50 px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
                   />
-                  <p className="mt-1 text-[11px] text-neutral-400">Admins, DevOps, engineers with root/admin access.</p>
+                  <p className="mt-1 text-[11px] text-neutral-400">Admins, engineers, external contractors with root access.</p>
                 </div>
 
                 <div>
                   <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                    Privileged Accounts
+                    Privileged Accounts to Vault
                   </label>
                   <input
                     type="number"
@@ -455,56 +626,132 @@ export default function PamCalculatorPage() {
                     onChange={(e) => handleInputChange("privAccounts", e.target.value)}
                     className="w-full rounded-lg border border-neutral-300 dark:border-white/15 bg-neutral-50/50 dark:bg-neutral-800/50 px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
                   />
-                  <p className="mt-1 text-[11px] text-neutral-400">Service accounts, domain admins, cloud IAM keys.</p>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                    IT / Security Hourly Rate ($/hr)
-                  </label>
-                  <input
-                    type="number"
-                    min="10"
-                    value={inputs.hourlyRate}
-                    onChange={(e) => handleInputChange("hourlyRate", e.target.value)}
-                    className="w-full rounded-lg border border-neutral-300 dark:border-white/15 bg-neutral-50/50 dark:bg-neutral-800/50 px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
-                  />
-                  <p className="mt-1 text-[11px] text-neutral-400">Fully burdened labor rate for sysadmins.</p>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                    Time Horizon (Years)
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    max="5"
-                    value={inputs.years}
-                    onChange={(e) => handleInputChange("years", e.target.value)}
-                    className="w-full rounded-lg border border-neutral-300 dark:border-white/15 bg-neutral-50/50 dark:bg-neutral-800/50 px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
-                  />
-                  <p className="mt-1 text-[11px] text-neutral-400">Analysis timeframe (1 to 5 years).</p>
+                  <p className="mt-1 text-[11px] text-neutral-400">Root, domain admin, database, and cloud credentials.</p>
                 </div>
               </div>
             </div>
 
-            {/* Section 2: Current State Costs (Before PAM) */}
-            <div className="rounded-2xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-900/90 p-6 shadow-xs">
+            {/* Panel 2: NHI Machine Secrets Vaulting (NEW!) */}
+            <div className="rounded-2xl border border-amber-500/30 bg-gradient-to-br from-white via-neutral-50/80 to-amber-50/20 dark:from-neutral-900/90 dark:via-neutral-900 dark:to-amber-950/20 p-6 shadow-xs">
               <div className="border-b border-neutral-200 dark:border-white/10 pb-3 mb-5">
-                <h3 className="text-base font-bold text-neutral-900 dark:text-white flex items-center gap-2">
-                  <LuReceipt className="size-5 text-amber-600 dark:text-amber-400" />
-                  Current State Costs (Before PAM - Operational Overhead)
-                </h3>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-base font-bold text-neutral-900 dark:text-white flex items-center gap-2">
+                    <span className="flex size-6 items-center justify-center rounded-md bg-amber-500/20 text-amber-800 dark:text-amber-400 text-xs font-bold">2</span>
+                    NHI Privileged Machine Secrets Vaulting
+                  </h3>
+                  <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2.5 py-0.5 text-[10px] font-bold text-amber-800 dark:text-amber-400 border border-amber-500/20">
+                    <LuBot className="size-3 text-amber-600 dark:text-amber-400" />
+                    Machine Secrets
+                  </span>
+                </div>
                 <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
-                  Manual password rotation, ticket handling, and access review workloads.
+                  Protect non-human privileged accounts: daemon credentials, automated container tokens, SSH keys, and CI/CD secrets.
                 </p>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                    Password Resets / Month
+                    Privileged Machine Accounts
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={inputs.nhiMachineAccounts}
+                    onChange={(e) => handleInputChange("nhiMachineAccounts", e.target.value)}
+                    className="w-full rounded-lg border border-neutral-300 dark:border-white/15 bg-white dark:bg-neutral-800/70 px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
+                  />
+                  <p className="mt-1 text-[11px] text-neutral-400">Service accounts, backup daemons, database engines.</p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+                    Machine Secrets & Tokens Vaulted
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={inputs.nhiSecretsCount}
+                    onChange={(e) => handleInputChange("nhiSecretsCount", e.target.value)}
+                    className="w-full rounded-lg border border-neutral-300 dark:border-white/15 bg-white dark:bg-neutral-800/70 px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
+                  />
+                  <p className="mt-1 text-[11px] text-neutral-400">SSH keys, API tokens, pipeline variables.</p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+                    Monthly Manual Rotation Hours
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={inputs.nhiManualHoursMonth}
+                    onChange={(e) => handleInputChange("nhiManualHoursMonth", e.target.value)}
+                    className="w-full rounded-lg border border-neutral-300 dark:border-white/15 bg-white dark:bg-neutral-800/70 px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
+                  />
+                  <p className="mt-1 text-[11px] text-neutral-400">DevOps hours manually rotating keys & tokens.</p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+                    Annual Machine Breach Exposure ({getCurrencySymbol(currency)})
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={inputs.nhiBreachExposureAnnual}
+                    onChange={(e) => handleInputChange("nhiBreachExposureAnnual", e.target.value)}
+                    className="w-full rounded-lg border border-neutral-300 dark:border-white/15 bg-white dark:bg-neutral-800/70 px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
+                  />
+                  <p className="mt-1 text-[11px] text-neutral-400">Risk from hardcoded machine credentials in scripts.</p>
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+                    Machine Secrets Vaulting Efficiency (%)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={inputs.nhiVaultingReductionPct}
+                    onChange={(e) => handleInputChange("nhiVaultingReductionPct", e.target.value)}
+                    className="w-full rounded-lg border border-neutral-300 dark:border-white/15 bg-white dark:bg-neutral-800/70 px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
+                  />
+                  <p className="mt-1 text-[11px] text-neutral-400">Reduction in manual key rotation toil & token breach probability.</p>
+                </div>
+              </div>
+
+              {/* Dynamic Live NHI Callout */}
+              <div className="mt-4 p-3 rounded-xl border border-amber-500/20 bg-amber-500/5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                <div className="flex items-center gap-2 text-neutral-700 dark:text-neutral-300">
+                  <LuSparkles className="size-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                  <span>
+                    Automated rotation across <strong>{inputs.nhiSecretsCount.toLocaleString()}</strong> secrets saves <strong>{(inputs.nhiManualHoursMonth * 12 * (inputs.nhiVaultingReductionPct / 100)).toFixed(0)} hrs/yr</strong> of DevOps toil.
+                  </span>
+                </div>
+                <div className="font-mono font-bold text-amber-700 dark:text-amber-300 shrink-0">
+                  + {formatMoney(calc.nhiTotalSavings)}/yr in NHI value
+                </div>
+              </div>
+            </div>
+
+            {/* Panel 3: Current State Operations (Before PAM) */}
+            <div className="rounded-2xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-900/90 p-6 shadow-xs">
+              <div className="border-b border-neutral-200 dark:border-white/10 pb-3 mb-5">
+                <h3 className="text-base font-bold text-neutral-900 dark:text-white flex items-center gap-2">
+                  <span className="flex size-6 items-center justify-center rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-400 text-xs font-bold">3</span>
+                  Current Operational Overhead (Pre-PAM)
+                </h3>
+                <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
+                  Manual admin password resets, ad-hoc access provisioning, and periodic compliance audit preparation.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+                    Privileged Password Resets / Month
                   </label>
                   <input
                     type="number"
@@ -513,12 +760,12 @@ export default function PamCalculatorPage() {
                     onChange={(e) => handleInputChange("resetsPerMonth", e.target.value)}
                     className="w-full rounded-lg border border-neutral-300 dark:border-white/15 bg-neutral-50/50 dark:bg-neutral-800/50 px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
                   />
-                  <p className="mt-1 text-[11px] text-neutral-400">Privileged credential lockout tickets.</p>
+                  <p className="mt-1 text-[11px] text-neutral-400">Admin password resets and unlocks per month.</p>
                 </div>
 
                 <div>
                   <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                    Cost per Password Reset ($)
+                    Cost Per Privileged Reset ({getCurrencySymbol(currency)})
                   </label>
                   <input
                     type="number"
@@ -527,12 +774,12 @@ export default function PamCalculatorPage() {
                     onChange={(e) => handleInputChange("costPerReset", e.target.value)}
                     className="w-full rounded-lg border border-neutral-300 dark:border-white/15 bg-neutral-50/50 dark:bg-neutral-800/50 px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
                   />
-                  <p className="mt-1 text-[11px] text-neutral-400">Direct support handling cost.</p>
+                  <p className="mt-1 text-[11px] text-neutral-400">High security verification cost for root resets.</p>
                 </div>
 
                 <div>
                   <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                    Provisioning Requests / Month
+                    Ad-hoc Provisioning Requests / Month
                   </label>
                   <input
                     type="number"
@@ -541,12 +788,12 @@ export default function PamCalculatorPage() {
                     onChange={(e) => handleInputChange("provReqPerMonth", e.target.value)}
                     className="w-full rounded-lg border border-neutral-300 dark:border-white/15 bg-neutral-50/50 dark:bg-neutral-800/50 px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
                   />
-                  <p className="mt-1 text-[11px] text-neutral-400">Elevation and server entitlement tickets.</p>
+                  <p className="mt-1 text-[11px] text-neutral-400">Temporary elevation and emergency access requests.</p>
                 </div>
 
                 <div>
                   <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                    Minutes per Provisioning Request
+                    Minutes Spent Per Request
                   </label>
                   <input
                     type="number"
@@ -555,40 +802,26 @@ export default function PamCalculatorPage() {
                     onChange={(e) => handleInputChange("minutesPerProv", e.target.value)}
                     className="w-full rounded-lg border border-neutral-300 dark:border-white/15 bg-neutral-50/50 dark:bg-neutral-800/50 px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
                   />
-                  <p className="mt-1 text-[11px] text-neutral-400">Manual administrative provisioning time.</p>
+                  <p className="mt-1 text-[11px] text-neutral-400">Approval, credential assignment, and manual revocation.</p>
                 </div>
 
                 <div>
                   <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                    Access Reviews / Year
+                    Privileged Access Reviews / Year
                   </label>
                   <input
                     type="number"
-                    min="1"
+                    min="0"
                     value={inputs.reviewsPerYear}
                     onChange={(e) => handleInputChange("reviewsPerYear", e.target.value)}
                     className="w-full rounded-lg border border-neutral-300 dark:border-white/15 bg-neutral-50/50 dark:bg-neutral-800/50 px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
                   />
-                  <p className="mt-1 text-[11px] text-neutral-400">Annual recurring certification campaigns.</p>
+                  <p className="mt-1 text-[11px] text-neutral-400">Scheduled re-certification cycles (typically quarterly).</p>
                 </div>
 
                 <div>
                   <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                    Hours per Access Review
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={inputs.hoursPerReview}
-                    onChange={(e) => handleInputChange("hoursPerReview", e.target.value)}
-                    className="w-full rounded-lg border border-neutral-300 dark:border-white/15 bg-neutral-50/50 dark:bg-neutral-800/50 px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
-                  />
-                  <p className="mt-1 text-[11px] text-neutral-400">Effort reviewing entitlements and logs.</p>
-                </div>
-
-                <div className="sm:col-span-2">
-                  <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                    Audit Evidence Hours / Year
+                    Annual Audit Prep Hours
                   </label>
                   <input
                     type="number"
@@ -597,41 +830,27 @@ export default function PamCalculatorPage() {
                     onChange={(e) => handleInputChange("auditHoursPerYear", e.target.value)}
                     className="w-full rounded-lg border border-neutral-300 dark:border-white/15 bg-neutral-50/50 dark:bg-neutral-800/50 px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
                   />
-                  <p className="mt-1 text-[11px] text-neutral-400">Annual auditor evidence compilation time.</p>
+                  <p className="mt-1 text-[11px] text-neutral-400">Hours pulling audit logs for SOX, ISO, PCI-DSS.</p>
                 </div>
               </div>
             </div>
 
-            {/* Section 3: Risk & Compliance Exposure */}
+            {/* Panel 4: Risk & Exposure Factors */}
             <div className="rounded-2xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-900/90 p-6 shadow-xs">
               <div className="border-b border-neutral-200 dark:border-white/10 pb-3 mb-5">
                 <h3 className="text-base font-bold text-neutral-900 dark:text-white flex items-center gap-2">
-                  <LuShieldAlert className="size-5 text-amber-600 dark:text-amber-400" />
-                  Risk & Compliance Exposure (Before PAM)
+                  <span className="flex size-6 items-center justify-center rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-400 text-xs font-bold">4</span>
+                  Risk & Regulatory Exposure Factors
                 </h3>
                 <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
-                  Expected loss probability from unvaulted credentials, insider abuse, and compliance penalties.
+                  Probability and financial fallout of credential-based breaches, insider abuse, and compliance non-conformance.
                 </p>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                    Critical Systems (Count)
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={inputs.criticalSystems}
-                    onChange={(e) => handleInputChange("criticalSystems", e.target.value)}
-                    className="w-full rounded-lg border border-neutral-300 dark:border-white/15 bg-neutral-50/50 dark:bg-neutral-800/50 px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
-                  />
-                  <p className="mt-1 text-[11px] text-neutral-400">Mission-critical targets requiring vault protection.</p>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                    Credential Incident Probability (%)
+                    Annual Credential Compromise Prob. (%)
                   </label>
                   <input
                     type="number"
@@ -641,12 +860,12 @@ export default function PamCalculatorPage() {
                     onChange={(e) => handleInputChange("credProb", e.target.value)}
                     className="w-full rounded-lg border border-neutral-300 dark:border-white/15 bg-neutral-50/50 dark:bg-neutral-800/50 px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
                   />
-                  <p className="mt-1 text-[11px] text-neutral-400">Annual likelihood of credential-based breach.</p>
+                  <p className="mt-1 text-[11px] text-neutral-400">Probability of unmanaged admin credential theft.</p>
                 </div>
 
                 <div>
                   <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                    Avg. Credential Incident Cost ($)
+                    Avg. Breach Financial Impact ({getCurrencySymbol(currency)})
                   </label>
                   <input
                     type="number"
@@ -655,40 +874,12 @@ export default function PamCalculatorPage() {
                     onChange={(e) => handleInputChange("credCost", e.target.value)}
                     className="w-full rounded-lg border border-neutral-300 dark:border-white/15 bg-neutral-50/50 dark:bg-neutral-800/50 px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
                   />
-                  <p className="mt-1 text-[11px] text-neutral-400">Total forensic, downtime, and regulatory damages.</p>
+                  <p className="mt-1 text-[11px] text-neutral-400">Forensics, regulatory fines, downtime, reputational loss.</p>
                 </div>
 
                 <div>
                   <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                    Insider Misuse Incidents / Year
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={inputs.insiderIncidents}
-                    onChange={(e) => handleInputChange("insiderIncidents", e.target.value)}
-                    className="w-full rounded-lg border border-neutral-300 dark:border-white/15 bg-neutral-50/50 dark:bg-neutral-800/50 px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
-                  />
-                  <p className="mt-1 text-[11px] text-neutral-400">Accidental or malicious internal abuse.</p>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                    Avg. Cost per Insider Incident ($)
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={inputs.insiderCost}
-                    onChange={(e) => handleInputChange("insiderCost", e.target.value)}
-                    className="w-full rounded-lg border border-neutral-300 dark:border-white/15 bg-neutral-50/50 dark:bg-neutral-800/50 px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
-                  />
-                  <p className="mt-1 text-[11px] text-neutral-400">Remediation and data restoration costs.</p>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                    Orphaned Accounts (%)
+                    Orphaned Account Rate (%)
                   </label>
                   <input
                     type="number"
@@ -698,12 +889,12 @@ export default function PamCalculatorPage() {
                     onChange={(e) => handleInputChange("orphanedPct", e.target.value)}
                     className="w-full rounded-lg border border-neutral-300 dark:border-white/15 bg-neutral-50/50 dark:bg-neutral-800/50 px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
                   />
-                  <p className="mt-1 text-[11px] text-neutral-400">Unmanaged / dormant privileged accounts.</p>
+                  <p className="mt-1 text-[11px] text-neutral-400">% of privileged accounts with no active human owner.</p>
                 </div>
 
-                <div className="sm:col-span-2">
+                <div>
                   <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                    Compliance Exposure ($/year)
+                    Regulatory Non-Compliance Risk ({getCurrencySymbol(currency)})
                   </label>
                   <input
                     type="number"
@@ -712,27 +903,27 @@ export default function PamCalculatorPage() {
                     onChange={(e) => handleInputChange("complianceExposure", e.target.value)}
                     className="w-full rounded-lg border border-neutral-300 dark:border-white/15 bg-neutral-50/50 dark:bg-neutral-800/50 px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
                   />
-                  <p className="mt-1 text-[11px] text-neutral-400">Potential audit fines (PCI-DSS, ISO 27001, HIPAA, SOX).</p>
+                  <p className="mt-1 text-[11px] text-neutral-400">Fines and remediation mandates (e.g., RBI, HIPAA, SOX).</p>
                 </div>
               </div>
             </div>
 
-            {/* Section 4: PAM Investment (Solution Costs) */}
+            {/* Panel 5: PAM Investment */}
             <div className="rounded-2xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-900/90 p-6 shadow-xs">
               <div className="border-b border-neutral-200 dark:border-white/10 pb-3 mb-5">
                 <h3 className="text-base font-bold text-neutral-900 dark:text-white flex items-center gap-2">
-                  <LuCreditCard className="size-5 text-amber-600 dark:text-amber-400" />
-                  PAM Investment (Solution Costs)
+                  <span className="flex size-6 items-center justify-center rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-400 text-xs font-bold">5</span>
+                  PAM Solution Investment
                 </h3>
                 <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
-                  Platform subscription, systems integration, admin staffing, and maintenance.
+                  Annual software subscription, professional services, directory integration, and ongoing infrastructure.
                 </p>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                    PAM License (Annual $)
+                    Annual PAM License ({getCurrencySymbol(currency)}/yr)
                   </label>
                   <input
                     type="number"
@@ -741,12 +932,12 @@ export default function PamCalculatorPage() {
                     onChange={(e) => handleInputChange("pamLicenseAnnual", e.target.value)}
                     className="w-full rounded-lg border border-neutral-300 dark:border-white/15 bg-neutral-50/50 dark:bg-neutral-800/50 px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
                   />
-                  <p className="mt-1 text-[11px] text-neutral-400">Vault software subscription.</p>
+                  <p className="mt-1 text-[11px] text-neutral-400">Vault, session manager, and rotation engine subscription.</p>
                 </div>
 
                 <div>
                   <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                    Implementation (One-time $)
+                    Implementation Cost ({getCurrencySymbol(currency)}, One-time)
                   </label>
                   <input
                     type="number"
@@ -755,12 +946,12 @@ export default function PamCalculatorPage() {
                     onChange={(e) => handleInputChange("implOneTime", e.target.value)}
                     className="w-full rounded-lg border border-neutral-300 dark:border-white/15 bg-neutral-50/50 dark:bg-neutral-800/50 px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
                   />
-                  <p className="mt-1 text-[11px] text-neutral-400">Hardening, vault architecture, deployment.</p>
+                  <p className="mt-1 text-[11px] text-neutral-400">Professional services, vault clustering, policy design.</p>
                 </div>
 
                 <div>
                   <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                    Integrations (One-time $)
+                    Directory & Cloud Integration ({getCurrencySymbol(currency)}, One-time)
                   </label>
                   <input
                     type="number"
@@ -769,26 +960,12 @@ export default function PamCalculatorPage() {
                     onChange={(e) => handleInputChange("integrationOneTime", e.target.value)}
                     className="w-full rounded-lg border border-neutral-300 dark:border-white/15 bg-neutral-50/50 dark:bg-neutral-800/50 px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
                   />
-                  <p className="mt-1 text-[11px] text-neutral-400">Server, database, and cloud connectors.</p>
+                  <p className="mt-1 text-[11px] text-neutral-400">Target connectors, Active Directory & cloud hooks.</p>
                 </div>
 
                 <div>
                   <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                    Training (One-time $)
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={inputs.trainingOneTime}
-                    onChange={(e) => handleInputChange("trainingOneTime", e.target.value)}
-                    className="w-full rounded-lg border border-neutral-300 dark:border-white/15 bg-neutral-50/50 dark:bg-neutral-800/50 px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
-                  />
-                  <p className="mt-1 text-[11px] text-neutral-400">Admin enablement and user onboarding.</p>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                    Support & Operations (Annual $)
+                    Annual Support & Maintenance ({getCurrencySymbol(currency)}/yr)
                   </label>
                   <input
                     type="number"
@@ -797,182 +974,40 @@ export default function PamCalculatorPage() {
                     onChange={(e) => handleInputChange("supportAnnual", e.target.value)}
                     className="w-full rounded-lg border border-neutral-300 dark:border-white/15 bg-neutral-50/50 dark:bg-neutral-800/50 px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
                   />
-                  <p className="mt-1 text-[11px] text-neutral-400">Ongoing 24x7 SLA support.</p>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                    Session Storage & Infra (Annual $)
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={inputs.sessionStorageAnnual}
-                    onChange={(e) => handleInputChange("sessionStorageAnnual", e.target.value)}
-                    className="w-full rounded-lg border border-neutral-300 dark:border-white/15 bg-neutral-50/50 dark:bg-neutral-800/50 px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
-                  />
-                  <p className="mt-1 text-[11px] text-neutral-400">Session video & audit logging storage.</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Section 5: Improvements With PAM */}
-            <div className="rounded-2xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-900/90 p-6 shadow-xs">
-              <div className="border-b border-neutral-200 dark:border-white/10 pb-3 mb-5">
-                <h3 className="text-base font-bold text-neutral-900 dark:text-white flex items-center gap-2">
-                  <LuZap className="size-5 text-amber-600 dark:text-amber-400" />
-                  Improvements With PAM (Benefit Levers)
-                </h3>
-                <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
-                  Percentage risk reduction and automated efficiency gains across operational workflows.
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                    Reset Reduction (%)
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={inputs.resetReduction}
-                    onChange={(e) => handleInputChange("resetReduction", e.target.value)}
-                    className="w-full rounded-lg border border-neutral-300 dark:border-white/15 bg-neutral-50/50 dark:bg-neutral-800/50 px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
-                  />
-                  <p className="mt-1 text-[11px] text-neutral-400">Automated password rotation.</p>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                    Provisioning Reduction (%)
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={inputs.provReduction}
-                    onChange={(e) => handleInputChange("provReduction", e.target.value)}
-                    className="w-full rounded-lg border border-neutral-300 dark:border-white/15 bg-neutral-50/50 dark:bg-neutral-800/50 px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
-                  />
-                  <p className="mt-1 text-[11px] text-neutral-400">Just-in-Time elevation speed.</p>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                    Review Effort Reduction (%)
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={inputs.reviewReduction}
-                    onChange={(e) => handleInputChange("reviewReduction", e.target.value)}
-                    className="w-full rounded-lg border border-neutral-300 dark:border-white/15 bg-neutral-50/50 dark:bg-neutral-800/50 px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
-                  />
-                  <p className="mt-1 text-[11px] text-neutral-400">Automated certification reporting.</p>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                    Audit Effort Reduction (%)
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={inputs.auditReduction}
-                    onChange={(e) => handleInputChange("auditReduction", e.target.value)}
-                    className="w-full rounded-lg border border-neutral-300 dark:border-white/15 bg-neutral-50/50 dark:bg-neutral-800/50 px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
-                  />
-                  <p className="mt-1 text-[11px] text-neutral-400">One-click audit trail export.</p>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                    Orphaned Cleanup (%)
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={inputs.orphanedCleanup}
-                    onChange={(e) => handleInputChange("orphanedCleanup", e.target.value)}
-                    className="w-full rounded-lg border border-neutral-300 dark:border-white/15 bg-neutral-50/50 dark:bg-neutral-800/50 px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
-                  />
-                  <p className="mt-1 text-[11px] text-neutral-400">Discovery of dormant accounts.</p>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                    Credential Risk Cut (%)
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={inputs.credRiskReduction}
-                    onChange={(e) => handleInputChange("credRiskReduction", e.target.value)}
-                    className="w-full rounded-lg border border-neutral-300 dark:border-white/15 bg-neutral-50/50 dark:bg-neutral-800/50 px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
-                  />
-                  <p className="mt-1 text-[11px] text-neutral-400">Credential vaulting & isolation.</p>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                    Insider Risk Cut (%)
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={inputs.insiderRiskReduction}
-                    onChange={(e) => handleInputChange("insiderRiskReduction", e.target.value)}
-                    className="w-full rounded-lg border border-neutral-300 dark:border-white/15 bg-neutral-50/50 dark:bg-neutral-800/50 px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
-                  />
-                  <p className="mt-1 text-[11px] text-neutral-400">Session recording & command limits.</p>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                    Compliance Risk Cut (%)
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={inputs.complianceReduction}
-                    onChange={(e) => handleInputChange("complianceReduction", e.target.value)}
-                    className="w-full rounded-lg border border-neutral-300 dark:border-white/15 bg-neutral-50/50 dark:bg-neutral-800/50 px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
-                  />
-                  <p className="mt-1 text-[11px] text-neutral-400">Elimination of non-conformance.</p>
+                  <p className="mt-1 text-[11px] text-neutral-400">Vendor 24x7 SLA support and version updates.</p>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* RIGHT COLUMN: Live Dynamic Charts (Sticky on Desktop) */}
+          {/* RIGHT: Live Visual Analytics (Sticky) */}
           <div className="lg:col-span-5 lg:sticky lg:top-24 space-y-6">
-            {/* 1. LINE CHART FIRST (Top): Cumulative Net Savings Trend */}
+            {/* 1. Line Chart: Cumulative Net Savings Trend */}
             <div className="rounded-2xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-900/90 p-5 shadow-xs">
               <div className="flex items-center justify-between mb-1">
                 <h3 className="text-sm font-bold text-neutral-900 dark:text-white flex items-center gap-1.5">
                   <LuTrendingUp className="size-4 text-amber-600 dark:text-amber-400" />
-                  <span>Cumulative Net Savings</span>
+                  <span>Cumulative Net Value ({currency})</span>
                 </h3>
-                <span className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold">
-                  {calc.paybackMonths ? `Break-even: ${calc.paybackMonths.toFixed(1)} mo` : "N/A"}
+                <span className="text-xs text-neutral-500 dark:text-neutral-400 font-medium">
+                  {calc.years}-Year Horizon
                 </span>
               </div>
               <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-4">
-                Cumulative capital trajectory over the {calc.years}-year timeframe.
+                Cumulative cashflow from initial implementation through multi-year operational return.
               </p>
 
               {/* Pure SVG Line / Trend Chart */}
               <div className="w-full h-44 pt-2">
                 <div className="relative w-full h-32 border-b border-neutral-200 dark:border-white/10">
                   <svg className="w-full h-full overflow-visible" preserveAspectRatio="none" viewBox="0 0 500 130">
+                    <defs>
+                      <linearGradient id="pamGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#d97706" stopOpacity="0.25" />
+                        <stop offset="100%" stopColor="#d97706" stopOpacity="0.0" />
+                      </linearGradient>
+                    </defs>
+
                     {/* Zero baseline */}
                     {minCumPam < 0 && (
                       <line
@@ -986,10 +1021,11 @@ export default function PamCalculatorPage() {
                       />
                     )}
 
+                    {/* Trend points & path */}
                     {(() => {
+                      const len = calc.cumulativeBenefit.length;
                       const points = calc.cumulativeBenefit.map((val, i) => {
-                        const denom = Math.max(1, calc.years - 1);
-                        const x = (i / denom) * 440 + 30;
+                        const x = len > 1 ? (i / (len - 1)) * 460 + 20 : 250;
                         const y = 130 - ((val - minCumPam) / cumRangePam) * 105 - 12;
                         return { x, y, val };
                       });
@@ -1003,11 +1039,11 @@ export default function PamCalculatorPage() {
                               <circle cx={p.x} cy={p.y} r="4" fill="#f59e0b" stroke="#ffffff" strokeWidth="2" />
                               <text
                                 x={p.x}
-                                y={p.y - 7}
+                                y={p.y - 8}
                                 textAnchor="middle"
                                 className="text-[10px] font-semibold fill-neutral-700 dark:fill-neutral-300"
                               >
-                                {pamFormatCurrency(p.val)}
+                                {formatMoney(p.val, true)}
                               </text>
                             </g>
                           ))}
@@ -1018,377 +1054,161 @@ export default function PamCalculatorPage() {
                 </div>
 
                 <div className="flex justify-between items-center px-1 pt-2 text-[11px] font-medium text-neutral-500 dark:text-neutral-400">
-                  {Array.from({ length: calc.years }).map((_, i) => (
-                    <span key={i}>Y{i + 1}</span>
+                  {Array.from({ length: calc.years }, (_, i) => i + 1).map((y) => (
+                    <span key={y}>Y{y}</span>
                   ))}
                 </div>
               </div>
             </div>
 
-            {/* 2. BAR CHART SECOND (Below): Cost vs. Benefit (by Year) */}
+            {/* 2. Grouped Bar Chart: Cost vs Benefits */}
             <div className="rounded-2xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-900/90 p-5 shadow-xs">
               <div className="flex items-center justify-between mb-1">
                 <h3 className="text-sm font-bold text-neutral-900 dark:text-white flex items-center gap-1.5">
-                  <LuLayers className="size-4 text-amber-600 dark:text-amber-400" />
-                  <span>Cost vs. Benefit (by Year)</span>
+                  <LuChartBar className="size-4 text-amber-600 dark:text-amber-400" />
+                  <span>Annual Cost vs. Benefit Value ({currency})</span>
                 </h3>
-                <span className="text-xs text-neutral-500 dark:text-neutral-400">
-                  {calc.years}-Year View
-                </span>
               </div>
               <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-4">
-                Total solution capex/opex vs. gross annual risk & operations savings.
+                Total annualized PAM operational expenditure versus risk avoidance and operational recovery.
               </p>
 
-              <div className="w-full h-40 flex items-end justify-between gap-3 px-2 border-b border-neutral-200 dark:border-white/10 pb-2">
-                {Array.from({ length: calc.years }).map((_, i) => {
-                  const yearNum = i + 1;
-                  const costVal = calc.yearlyCosts[i];
-                  const benVal = calc.yearlyBenefits[i];
-
-                  const cH = Math.max(10, (costVal / calc.maxBarVal) * 100);
-                  const bH = Math.max(10, (benVal / calc.maxBarVal) * 100);
-
-                  return (
-                    <div key={yearNum} className="flex-1 flex flex-col items-center gap-1 h-full justify-end">
-                      <div className="w-full flex items-end justify-center gap-1.5 h-full">
-                        {/* Cost */}
-                        <div
-                          className="w-1/2 max-w-[20px] bg-rose-500/80 hover:bg-rose-500 rounded-t-sm transition-all relative group"
-                          style={{ height: `${cH}%` }}
-                        >
-                          <div className="absolute -top-7 left-1/2 -translate-x-1/2 hidden group-hover:block bg-neutral-900 text-white text-[10px] px-1.5 py-0.5 rounded shadow pointer-events-none whitespace-nowrap z-10">
-                            {pamFormatCurrency(costVal)}
-                          </div>
-                        </div>
-                        {/* Benefit */}
-                        <div
-                          className="w-1/2 max-w-[20px] bg-emerald-500/80 hover:bg-emerald-500 rounded-t-sm transition-all relative group"
-                          style={{ height: `${bH}%` }}
-                        >
-                          <div className="absolute -top-7 left-1/2 -translate-x-1/2 hidden group-hover:block bg-neutral-900 text-white text-[10px] px-1.5 py-0.5 rounded shadow pointer-events-none whitespace-nowrap z-10">
-                            {pamFormatCurrency(benVal)}
-                          </div>
-                        </div>
+              <div className="w-full h-36 pt-2">
+                <div className="h-28 flex items-end justify-center gap-12 border-b border-neutral-200 dark:border-white/10 pb-2">
+                  {/* PAM Cost */}
+                  <div className="flex flex-col items-center gap-1 h-full justify-end w-20">
+                    <div
+                      className="w-full bg-amber-500/80 hover:bg-amber-500 rounded-t-sm transition-all relative group"
+                      style={{ height: `${Math.max(15, (calc.newAnnualPAMCost / calc.maxBarVal) * 100)}%` }}
+                    >
+                      <div className="absolute -top-7 left-1/2 -translate-x-1/2 hidden group-hover:block bg-neutral-900 text-white text-[10px] px-1.5 py-0.5 rounded shadow pointer-events-none whitespace-nowrap z-10">
+                        {formatMoney(calc.newAnnualPAMCost)}
                       </div>
-                      <span className="text-[10px] font-medium text-neutral-500 dark:text-neutral-400">
-                        Y{yearNum}
-                      </span>
                     </div>
-                  );
-                })}
-              </div>
+                    <span className="text-[11px] font-medium text-neutral-500 dark:text-neutral-400">
+                      PAM OpEx
+                    </span>
+                  </div>
 
-              <div className="flex items-center justify-center gap-5 mt-3 text-[11px]">
-                <div className="flex items-center gap-1.5">
-                  <span className="size-2.5 rounded-xs bg-rose-500" />
-                  <span className="text-neutral-600 dark:text-neutral-400">Investment</span>
+                  {/* PAM Benefit */}
+                  <div className="flex flex-col items-center gap-1 h-full justify-end w-20">
+                    <div
+                      className="w-full bg-emerald-500/80 hover:bg-emerald-500 rounded-t-sm transition-all relative group"
+                      style={{ height: `${Math.max(15, (calc.totalAnnualBenefits / calc.maxBarVal) * 100)}%` }}
+                    >
+                      <div className="absolute -top-7 left-1/2 -translate-x-1/2 hidden group-hover:block bg-neutral-900 text-white text-[10px] px-1.5 py-0.5 rounded shadow pointer-events-none whitespace-nowrap z-10">
+                        {formatMoney(calc.totalAnnualBenefits)}
+                      </div>
+                    </div>
+                    <span className="text-[11px] font-medium text-neutral-500 dark:text-neutral-400">
+                      Benefits
+                    </span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="size-2.5 rounded-xs bg-emerald-500" />
-                  <span className="text-neutral-600 dark:text-neutral-400">Benefits</span>
+
+                <div className="flex items-center justify-center gap-6 mt-3 text-xs">
+                  <div className="flex items-center gap-1.5">
+                    <span className="size-2.5 rounded-xs bg-amber-500" />
+                    <span className="text-[11px] text-neutral-600 dark:text-neutral-400">PAM Running Cost</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="size-2.5 rounded-xs bg-emerald-500" />
+                    <span className="text-[11px] text-neutral-600 dark:text-neutral-400">Annual Return Value</span>
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* 3. Investment Breakdown */}
+            {/* Strategic Value Card */}
             <div className="rounded-2xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-900/90 p-5 shadow-xs">
-              <div className="flex items-center justify-between mb-1">
-                <h3 className="text-sm font-bold text-neutral-900 dark:text-white">
-                  Investment Breakdown
-                </h3>
-                <span className="text-xs font-mono font-bold text-neutral-800 dark:text-neutral-200">
-                  {pamFormatCurrency(calc.totalInvestment)}
-                </span>
-              </div>
-              <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-4">
-                Cumulative solution allocation over {calc.years} years.
-              </p>
-
-              <div className="space-y-2 py-1">
-                {[
-                  { label: "PAM Licenses", val: inputs.pamLicenseAnnual * calc.years, color: "bg-amber-500" },
-                  { label: "Implementation", val: inputs.implOneTime, color: "bg-amber-700" },
-                  { label: "Integrations", val: inputs.integrationOneTime, color: "bg-orange-500" },
-                  { label: "Support & Maint.", val: inputs.supportAnnual * calc.years, color: "bg-yellow-500" },
-                  { label: "Session Storage", val: inputs.sessionStorageAnnual * calc.years, color: "bg-amber-400" },
-                  { label: "Training", val: inputs.trainingOneTime, color: "bg-amber-600" },
-                ].map((item, idx) => {
-                  const pct = calc.totalInvestment > 0 ? (item.val / calc.totalInvestment) * 100 : 0;
-                  return (
-                    <div key={idx} className="space-y-1">
-                      <div className="flex justify-between text-xs text-neutral-700 dark:text-neutral-300">
-                        <span className="flex items-center gap-1.5">
-                          <span className={`size-2 rounded-full ${item.color}`} />
-                          <span>{item.label}</span>
-                        </span>
-                        <span className="font-mono">{pamFormatCurrency(item.val)} ({pct.toFixed(0)}%)</span>
-                      </div>
-                      <div className="w-full h-1.5 rounded-full bg-neutral-100 dark:bg-neutral-800 overflow-hidden">
-                        <div className={`h-full ${item.color}`} style={{ width: `${pct}%` }} />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* 4. Benefit Drivers (Annual) */}
-            <div className="rounded-2xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-900/90 p-5 shadow-xs">
-              <div className="flex items-center justify-between mb-1">
-                <h3 className="text-sm font-bold text-neutral-900 dark:text-white">
-                  Benefit Drivers (Annual)
-                </h3>
-                <span className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold font-mono">
-                  {pamFormatCurrency(calc.totalAnnualBenefits)}/yr
-                </span>
-              </div>
-              <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-4">
-                Operational efficiencies and risk loss avoidance annualized.
-              </p>
-
-              <div className="space-y-2 py-1">
-                {[
-                  { label: "Credential Risk Avoidance", val: calc.credRiskSavings, color: "bg-emerald-500" },
-                  { label: "Insider Risk Mitigation", val: calc.insiderRiskSavings, color: "bg-teal-500" },
-                  { label: "Provisioning Automation", val: calc.provisioningSavings, color: "bg-amber-500" },
-                  { label: "Access Review Reduction", val: calc.reviewSavings, color: "bg-amber-600" },
-                  { label: "Audit Evidence Savings", val: calc.auditSavings, color: "bg-amber-400" },
-                  { label: "Compliance Risk Cut", val: calc.complianceSavings, color: "bg-cyan-500" },
-                  { label: "Password Reset Savings", val: calc.resetSavings, color: "bg-yellow-500" },
-                ].map((item, idx) => {
-                  const pct = calc.totalAnnualBenefits > 0 ? (item.val / calc.totalAnnualBenefits) * 100 : 0;
-                  return (
-                    <div key={idx} className="space-y-1">
-                      <div className="flex justify-between text-xs text-neutral-700 dark:text-neutral-300">
-                        <span className="flex items-center gap-1.5">
-                          <span className={`size-2 rounded-full ${item.color}`} />
-                          <span>{item.label}</span>
-                        </span>
-                        <span className="font-mono">{pamFormatCurrency(item.val)} ({pct.toFixed(0)}%)</span>
-                      </div>
-                      <div className="w-full h-1.5 rounded-full bg-neutral-100 dark:bg-neutral-800 overflow-hidden">
-                        <div className={`h-full ${item.color}`} style={{ width: `${pct}%` }} />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-400 mb-2 flex items-center gap-1.5">
+                <LuLightbulb className="size-3.5 text-amber-600 dark:text-amber-400" />
+                Strategic PAM Highlights
+              </h3>
+              <ul className="space-y-1.5 text-xs text-neutral-600 dark:text-neutral-300">
+                <li className="flex items-start gap-1.5">
+                  <span className="text-amber-600 dark:text-amber-400 font-bold shrink-0">▪</span>
+                  <span><strong>{formatMoney(calc.riskReductionAnnualValue)}/yr</strong> in total avoided human & machine credential breach risk.</span>
+                </li>
+                <li className="flex items-start gap-1.5">
+                  <span className="text-amber-600 dark:text-amber-400 font-bold shrink-0">▪</span>
+                  <span>Automated machine secrets vaulting eliminates static token leakage across <strong>{inputs.nhiSecretsCount.toLocaleString()}</strong> machine endpoints.</span>
+                </li>
+                <li className="flex items-start gap-1.5">
+                  <span className="text-amber-600 dark:text-amber-400 font-bold shrink-0">▪</span>
+                  <span>Payback break-even projected at <strong>{calc.paybackMonths ? `${calc.paybackMonths.toFixed(1)} months` : "N/A"}</strong>.</span>
+                </li>
+              </ul>
             </div>
           </div>
         </section>
 
-        {/* 3 Detailed Tables: Investment, Benefits, KPI Comparison (Bottom Area Kept Intact) */}
-        <section className="space-y-8">
-          {/* Table 1: Investment Breakdown Table */}
-          <div className="rounded-2xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-900/90 p-6 shadow-xs overflow-hidden">
-            <h3 className="text-base font-bold text-neutral-900 dark:text-white mb-1">
-              PAM Investment Breakdown
+        {/* Detailed Financial Breakdown Table */}
+        <section className="rounded-2xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-900/90 p-6 shadow-xs overflow-hidden">
+          <div className="border-b border-neutral-200 dark:border-white/10 pb-4 mb-4">
+            <h3 className="text-base font-bold text-neutral-900 dark:text-white">
+              Detailed PAM Economic Impact ({calc.years}-Year Horizon)
             </h3>
-            <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-4">
-              Comprehensive one-time capital requirements and ongoing operating costs.
+            <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
+              Annualized and multi-year comparison of baseline risk and operational costs versus PAM returns.
             </p>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs border-collapse">
-                <thead>
-                  <tr className="border-b border-neutral-200 dark:border-white/10 text-neutral-500 dark:text-neutral-400 font-semibold uppercase tracking-wider text-[11px]">
-                    <th className="py-3 px-4">Investment Element</th>
-                    <th className="py-3 px-4">Cost Type</th>
-                    <th className="py-3 px-4 text-right">Annual Impact</th>
-                    <th className="py-3 px-4 text-right">{calc.years}-Year Horizon Total</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-neutral-100 dark:divide-white/5 text-neutral-700 dark:text-neutral-300">
-                  <tr>
-                    <td className="py-3 px-4 font-medium text-neutral-900 dark:text-white">Software License / Subscription</td>
-                    <td className="py-3 px-4 text-neutral-500">Recurring</td>
-                    <td className="py-3 px-4 text-right font-mono">{pamFormatFullUSD(inputs.pamLicenseAnnual)}</td>
-                    <td className="py-3 px-4 text-right font-mono">{pamFormatFullUSD(inputs.pamLicenseAnnual * calc.years)}</td>
-                  </tr>
-                  <tr>
-                    <td className="py-3 px-4 font-medium text-neutral-900 dark:text-white">Implementation & Professional Services</td>
-                    <td className="py-3 px-4 text-neutral-500">One-time</td>
-                    <td className="py-3 px-4 text-right font-mono">—</td>
-                    <td className="py-3 px-4 text-right font-mono">{pamFormatFullUSD(inputs.implOneTime)}</td>
-                  </tr>
-                  <tr>
-                    <td className="py-3 px-4 font-medium text-neutral-900 dark:text-white">Target Integrations & Connectors</td>
-                    <td className="py-3 px-4 text-neutral-500">One-time</td>
-                    <td className="py-3 px-4 text-right font-mono">—</td>
-                    <td className="py-3 px-4 text-right font-mono">{pamFormatFullUSD(inputs.integrationOneTime)}</td>
-                  </tr>
-                  <tr>
-                    <td className="py-3 px-4 font-medium text-neutral-900 dark:text-white">Training & Change Management</td>
-                    <td className="py-3 px-4 text-neutral-500">One-time</td>
-                    <td className="py-3 px-4 text-right font-mono">—</td>
-                    <td className="py-3 px-4 text-right font-mono">{pamFormatFullUSD(inputs.trainingOneTime)}</td>
-                  </tr>
-                  <tr>
-                    <td className="py-3 px-4 font-medium text-neutral-900 dark:text-white">Administration & Tier 3 Support</td>
-                    <td className="py-3 px-4 text-neutral-500">Recurring</td>
-                    <td className="py-3 px-4 text-right font-mono">{pamFormatFullUSD(inputs.supportAnnual)}</td>
-                    <td className="py-3 px-4 text-right font-mono">{pamFormatFullUSD(inputs.supportAnnual * calc.years)}</td>
-                  </tr>
-                  <tr>
-                    <td className="py-3 px-4 font-medium text-neutral-900 dark:text-white">Session Recording Infrastructure & Storage</td>
-                    <td className="py-3 px-4 text-neutral-500">Recurring</td>
-                    <td className="py-3 px-4 text-right font-mono">{pamFormatFullUSD(inputs.sessionStorageAnnual)}</td>
-                    <td className="py-3 px-4 text-right font-mono">{pamFormatFullUSD(inputs.sessionStorageAnnual * calc.years)}</td>
-                  </tr>
-                  <tr className="border-t border-neutral-200 dark:border-white/10 bg-amber-500/5 dark:bg-amber-500/10 font-bold text-amber-900 dark:text-amber-300">
-                    <td className="py-3 px-4">Total PAM Investment</td>
-                    <td className="py-3 px-4">All Costs</td>
-                    <td className="py-3 px-4 text-right font-mono">{pamFormatFullUSD(calc.newAnnualPAMCost)}</td>
-                    <td className="py-3 px-4 text-right font-mono">{pamFormatFullUSD(calc.totalInvestment)}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
           </div>
 
-          {/* Table 2: Benefits Breakdown Table */}
-          <div className="rounded-2xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-900/90 p-6 shadow-xs overflow-hidden">
-            <h3 className="text-base font-bold text-neutral-900 dark:text-white mb-1">
-              Annual & Horizon Benefits Breakdown
-            </h3>
-            <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-4">
-              Value delivered per category across operational automation and risk mitigation.
-            </p>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs border-collapse">
-                <thead>
-                  <tr className="border-b border-neutral-200 dark:border-white/10 text-neutral-500 dark:text-neutral-400 font-semibold uppercase tracking-wider text-[11px]">
-                    <th className="py-3 px-4">Benefit Category</th>
-                    <th className="py-3 px-4 text-right">Current Annual Exposure</th>
-                    <th className="py-3 px-4 text-right">% Reduction</th>
-                    <th className="py-3 px-4 text-right">Annual Savings</th>
-                    <th className="py-3 px-4 text-right">{calc.years}-Year Total Savings</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-neutral-100 dark:divide-white/5 text-neutral-700 dark:text-neutral-300">
-                  <tr>
-                    <td className="py-3 px-4 font-medium text-neutral-900 dark:text-white">Password Resets & Account Lockouts</td>
-                    <td className="py-3 px-4 text-right font-mono">{pamFormatFullUSD(calc.passwordResetCost)}</td>
-                    <td className="py-3 px-4 text-right font-mono text-amber-600">{inputs.resetReduction}%</td>
-                    <td className="py-3 px-4 text-right font-mono text-emerald-600 dark:text-emerald-400">{pamFormatFullUSD(calc.resetSavings)}</td>
-                    <td className="py-3 px-4 text-right font-mono text-emerald-600 dark:text-emerald-400">{pamFormatFullUSD(calc.resetSavings * calc.years)}</td>
-                  </tr>
-                  <tr>
-                    <td className="py-3 px-4 font-medium text-neutral-900 dark:text-white">Privileged Provisioning & JIT Elevation</td>
-                    <td className="py-3 px-4 text-right font-mono">{pamFormatFullUSD(calc.provisioningCost)}</td>
-                    <td className="py-3 px-4 text-right font-mono text-amber-600">{inputs.provReduction}%</td>
-                    <td className="py-3 px-4 text-right font-mono text-emerald-600 dark:text-emerald-400">{pamFormatFullUSD(calc.provisioningSavings)}</td>
-                    <td className="py-3 px-4 text-right font-mono text-emerald-600 dark:text-emerald-400">{pamFormatFullUSD(calc.provisioningSavings * calc.years)}</td>
-                  </tr>
-                  <tr>
-                    <td className="py-3 px-4 font-medium text-neutral-900 dark:text-white">Access Review & Certification Overhead</td>
-                    <td className="py-3 px-4 text-right font-mono">{pamFormatFullUSD(calc.accessReviewCost)}</td>
-                    <td className="py-3 px-4 text-right font-mono text-amber-600">{inputs.reviewReduction}%</td>
-                    <td className="py-3 px-4 text-right font-mono text-emerald-600 dark:text-emerald-400">{pamFormatFullUSD(calc.reviewSavings)}</td>
-                    <td className="py-3 px-4 text-right font-mono text-emerald-600 dark:text-emerald-400">{pamFormatFullUSD(calc.reviewSavings * calc.years)}</td>
-                  </tr>
-                  <tr>
-                    <td className="py-3 px-4 font-medium text-neutral-900 dark:text-white">Audit Evidence Gathering & Preparation</td>
-                    <td className="py-3 px-4 text-right font-mono">{pamFormatFullUSD(calc.auditCost)}</td>
-                    <td className="py-3 px-4 text-right font-mono text-amber-600">{inputs.auditReduction}%</td>
-                    <td className="py-3 px-4 text-right font-mono text-emerald-600 dark:text-emerald-400">{pamFormatFullUSD(calc.auditSavings)}</td>
-                    <td className="py-3 px-4 text-right font-mono text-emerald-600 dark:text-emerald-400">{pamFormatFullUSD(calc.auditSavings * calc.years)}</td>
-                  </tr>
-                  <tr>
-                    <td className="py-3 px-4 font-medium text-neutral-900 dark:text-white">Credential-Based Incident Expected Loss</td>
-                    <td className="py-3 px-4 text-right font-mono">{pamFormatFullUSD(calc.credentialIncidentExpectedLoss)}</td>
-                    <td className="py-3 px-4 text-right font-mono text-amber-600">{inputs.credRiskReduction}%</td>
-                    <td className="py-3 px-4 text-right font-mono text-emerald-600 dark:text-emerald-400">{pamFormatFullUSD(calc.credRiskSavings)}</td>
-                    <td className="py-3 px-4 text-right font-mono text-emerald-600 dark:text-emerald-400">{pamFormatFullUSD(calc.credRiskSavings * calc.years)}</td>
-                  </tr>
-                  <tr>
-                    <td className="py-3 px-4 font-medium text-neutral-900 dark:text-white">Insider Misuse & Accidental Errors</td>
-                    <td className="py-3 px-4 text-right font-mono">{pamFormatFullUSD(calc.insiderExpectedLoss)}</td>
-                    <td className="py-3 px-4 text-right font-mono text-amber-600">{inputs.insiderRiskReduction}%</td>
-                    <td className="py-3 px-4 text-right font-mono text-emerald-600 dark:text-emerald-400">{pamFormatFullUSD(calc.insiderRiskSavings)}</td>
-                    <td className="py-3 px-4 text-right font-mono text-emerald-600 dark:text-emerald-400">{pamFormatFullUSD(calc.insiderRiskSavings * calc.years)}</td>
-                  </tr>
-                  <tr>
-                    <td className="py-3 px-4 font-medium text-neutral-900 dark:text-white">Orphaned Account Remediation</td>
-                    <td className="py-3 px-4 text-right font-mono">{pamFormatFullUSD(calc.orphanedAccountRiskCost)}</td>
-                    <td className="py-3 px-4 text-right font-mono text-amber-600">{inputs.orphanedCleanup}%</td>
-                    <td className="py-3 px-4 text-right font-mono text-emerald-600 dark:text-emerald-400">{pamFormatFullUSD(calc.orphanedSavings)}</td>
-                    <td className="py-3 px-4 text-right font-mono text-emerald-600 dark:text-emerald-400">{pamFormatFullUSD(calc.orphanedSavings * calc.years)}</td>
-                  </tr>
-                  <tr>
-                    <td className="py-3 px-4 font-medium text-neutral-900 dark:text-white">Compliance Exposure & Penalties</td>
-                    <td className="py-3 px-4 text-right font-mono">{pamFormatFullUSD(calc.complianceExpectedLoss)}</td>
-                    <td className="py-3 px-4 text-right font-mono text-amber-600">{inputs.complianceReduction}%</td>
-                    <td className="py-3 px-4 text-right font-mono text-emerald-600 dark:text-emerald-400">{pamFormatFullUSD(calc.complianceSavings)}</td>
-                    <td className="py-3 px-4 text-right font-mono text-emerald-600 dark:text-emerald-400">{pamFormatFullUSD(calc.complianceSavings * calc.years)}</td>
-                  </tr>
-                  <tr className="border-t border-neutral-200 dark:border-white/10 bg-amber-500/5 dark:bg-amber-500/10 font-bold text-amber-900 dark:text-amber-300">
-                    <td className="py-3 px-4">Total Benefits Realized</td>
-                    <td className="py-3 px-4 text-right font-mono">{pamFormatFullUSD(calc.totalCurrentAnnual)}</td>
-                    <td className="py-3 px-4 text-right font-mono">—</td>
-                    <td className="py-3 px-4 text-right font-mono text-emerald-700 dark:text-emerald-300">{pamFormatFullUSD(calc.totalAnnualBenefits)}</td>
-                    <td className="py-3 px-4 text-right font-mono text-emerald-700 dark:text-emerald-300">{pamFormatFullUSD(calc.totalBenefits)}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* Table 3: Before vs After KPI Comparison */}
-          <div className="rounded-2xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-900/90 p-6 shadow-xs overflow-hidden">
-            <h3 className="text-base font-bold text-neutral-900 dark:text-white mb-1">
-              Operational KPI Comparison (Before vs. After)
-            </h3>
-            <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-4">
-              Direct operational metrics shift achieved through automated credential management.
-            </p>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs border-collapse">
-                <thead>
-                  <tr className="border-b border-neutral-200 dark:border-white/10 text-neutral-500 dark:text-neutral-400 font-semibold uppercase tracking-wider text-[11px]">
-                    <th className="py-3 px-4">Key Performance Indicator</th>
-                    <th className="py-3 px-4 text-right">Current Baseline</th>
-                    <th className="py-3 px-4 text-right">With PAM Deployed</th>
-                    <th className="py-3 px-4 text-right">Net Operational Gain</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-neutral-100 dark:divide-white/5 text-neutral-700 dark:text-neutral-300">
-                  <tr>
-                    <td className="py-3 px-4 font-medium text-neutral-900 dark:text-white">Annual Password Reset Tickets</td>
-                    <td className="py-3 px-4 text-right font-mono">{(inputs.resetsPerMonth * 12).toLocaleString("en-US")}</td>
-                    <td className="py-3 px-4 text-right font-mono">{Math.round(inputs.resetsPerMonth * 12 * (1 - inputs.resetReduction / 100)).toLocaleString("en-US")}</td>
-                    <td className="py-3 px-4 text-right font-mono text-emerald-600 dark:text-emerald-400">-{Math.round(inputs.resetsPerMonth * 12 * (inputs.resetReduction / 100)).toLocaleString("en-US")} tickets/yr</td>
-                  </tr>
-                  <tr>
-                    <td className="py-3 px-4 font-medium text-neutral-900 dark:text-white">Annual Provisioning Hours</td>
-                    <td className="py-3 px-4 text-right font-mono">{Math.round(inputs.provReqPerMonth * 12 * (inputs.minutesPerProv / 60)).toLocaleString("en-US")} hrs</td>
-                    <td className="py-3 px-4 text-right font-mono">{Math.round(inputs.provReqPerMonth * 12 * (inputs.minutesPerProv / 60) * (1 - inputs.provReduction / 100)).toLocaleString("en-US")} hrs</td>
-                    <td className="py-3 px-4 text-right font-mono text-emerald-600 dark:text-emerald-400">-{Math.round(inputs.provReqPerMonth * 12 * (inputs.minutesPerProv / 60) * (inputs.provReduction / 100)).toLocaleString("en-US")} hrs saved</td>
-                  </tr>
-                  <tr>
-                    <td className="py-3 px-4 font-medium text-neutral-900 dark:text-white">Access Review Hours / Year</td>
-                    <td className="py-3 px-4 text-right font-mono">{(inputs.reviewsPerYear * inputs.hoursPerReview).toLocaleString("en-US")} hrs</td>
-                    <td className="py-3 px-4 text-right font-mono">{Math.round(inputs.reviewsPerYear * inputs.hoursPerReview * (1 - inputs.reviewReduction / 100)).toLocaleString("en-US")} hrs</td>
-                    <td className="py-3 px-4 text-right font-mono text-emerald-600 dark:text-emerald-400">-{Math.round(inputs.reviewsPerYear * inputs.hoursPerReview * (inputs.reviewReduction / 100)).toLocaleString("en-US")} hrs saved</td>
-                  </tr>
-                  <tr>
-                    <td className="py-3 px-4 font-medium text-neutral-900 dark:text-white">Audit Preparation Hours / Year</td>
-                    <td className="py-3 px-4 text-right font-mono">{inputs.auditHoursPerYear.toLocaleString("en-US")} hrs</td>
-                    <td className="py-3 px-4 text-right font-mono">{Math.round(inputs.auditHoursPerYear * (1 - inputs.auditReduction / 100)).toLocaleString("en-US")} hrs</td>
-                    <td className="py-3 px-4 text-right font-mono text-emerald-600 dark:text-emerald-400">-{Math.round(inputs.auditHoursPerYear * (inputs.auditReduction / 100)).toLocaleString("en-US")} hrs saved</td>
-                  </tr>
-                  <tr>
-                    <td className="py-3 px-4 font-medium text-neutral-900 dark:text-white">Orphaned Accounts</td>
-                    <td className="py-3 px-4 text-right font-mono">{Math.round(inputs.privAccounts * (inputs.orphanedPct / 100)).toLocaleString("en-US")}</td>
-                    <td className="py-3 px-4 text-right font-mono">{Math.round(inputs.privAccounts * (inputs.orphanedPct / 100) * (1 - inputs.orphanedCleanup / 100)).toLocaleString("en-US")}</td>
-                    <td className="py-3 px-4 text-right font-mono text-emerald-600 dark:text-emerald-400">-{Math.round(inputs.privAccounts * (inputs.orphanedPct / 100) * (inputs.orphanedCleanup / 100)).toLocaleString("en-US")} accounts remediated</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className="border-b border-neutral-200 dark:border-white/10 text-neutral-500 dark:text-neutral-400 font-semibold uppercase tracking-wider text-[11px]">
+                  <th className="py-3 px-4">Financial Driver</th>
+                  <th className="py-3 px-4 text-right">Annual Baseline ({currency})</th>
+                  <th className="py-3 px-4 text-right">Annual Value Avoided ({currency})</th>
+                  <th className="py-3 px-4 text-right">{calc.years}-Year Cumulative Benefit</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-neutral-100 dark:divide-white/5 text-neutral-700 dark:text-neutral-300">
+                <tr>
+                  <td className="py-3 px-4 font-medium text-neutral-900 dark:text-white">Credential Compromise Risk</td>
+                  <td className="py-3 px-4 text-right font-mono text-rose-600 dark:text-rose-400">{formatMoney(calc.credentialIncidentExpectedLoss)}</td>
+                  <td className="py-3 px-4 text-right font-mono text-emerald-600 dark:text-emerald-400">+{formatMoney(calc.credRiskSavings)}</td>
+                  <td className="py-3 px-4 text-right font-mono text-emerald-600 dark:text-emerald-400">+{formatMoney(calc.credRiskSavings * calc.years)}</td>
+                </tr>
+                <tr>
+                  <td className="py-3 px-4 font-medium text-neutral-900 dark:text-white">NHI Machine Secrets & Token Vaulting</td>
+                  <td className="py-3 px-4 text-right font-mono text-rose-600 dark:text-rose-400">{formatMoney(calc.nhiBreachLoss + calc.nhiManualRotationCost)}</td>
+                  <td className="py-3 px-4 text-right font-mono text-emerald-600 dark:text-emerald-400">+{formatMoney(calc.nhiTotalSavings)}</td>
+                  <td className="py-3 px-4 text-right font-mono text-emerald-600 dark:text-emerald-400">+{formatMoney(calc.nhiTotalSavings * calc.years)}</td>
+                </tr>
+                <tr>
+                  <td className="py-3 px-4 font-medium text-neutral-900 dark:text-white">Insider Threat Mitigation</td>
+                  <td className="py-3 px-4 text-right font-mono text-rose-600 dark:text-rose-400">{formatMoney(calc.insiderExpectedLoss)}</td>
+                  <td className="py-3 px-4 text-right font-mono text-emerald-600 dark:text-emerald-400">+{formatMoney(calc.insiderRiskSavings)}</td>
+                  <td className="py-3 px-4 text-right font-mono text-emerald-600 dark:text-emerald-400">+{formatMoney(calc.insiderRiskSavings * calc.years)}</td>
+                </tr>
+                <tr>
+                  <td className="py-3 px-4 font-medium text-neutral-900 dark:text-white">Privileged Password Resets</td>
+                  <td className="py-3 px-4 text-right font-mono text-rose-600 dark:text-rose-400">{formatMoney(calc.passwordResetCost)}</td>
+                  <td className="py-3 px-4 text-right font-mono text-emerald-600 dark:text-emerald-400">+{formatMoney(calc.resetSavings)}</td>
+                  <td className="py-3 px-4 text-right font-mono text-emerald-600 dark:text-emerald-400">+{formatMoney(calc.resetSavings * calc.years)}</td>
+                </tr>
+                <tr>
+                  <td className="py-3 px-4 font-medium text-neutral-900 dark:text-white">Ad-hoc Provisioning Automation</td>
+                  <td className="py-3 px-4 text-right font-mono text-rose-600 dark:text-rose-400">{formatMoney(calc.provisioningCost)}</td>
+                  <td className="py-3 px-4 text-right font-mono text-emerald-600 dark:text-emerald-400">+{formatMoney(calc.provisioningSavings)}</td>
+                  <td className="py-3 px-4 text-right font-mono text-emerald-600 dark:text-emerald-400">+{formatMoney(calc.provisioningSavings * calc.years)}</td>
+                </tr>
+                <tr>
+                  <td className="py-3 px-4 font-medium text-neutral-900 dark:text-white">Compliance & Audit Preparation</td>
+                  <td className="py-3 px-4 text-right font-mono text-rose-600 dark:text-rose-400">{formatMoney(calc.auditCost + calc.complianceExpectedLoss)}</td>
+                  <td className="py-3 px-4 text-right font-mono text-emerald-600 dark:text-emerald-400">+{formatMoney(calc.auditSavings + calc.complianceSavings)}</td>
+                  <td className="py-3 px-4 text-right font-mono text-emerald-600 dark:text-emerald-400">+{formatMoney((calc.auditSavings + calc.complianceSavings) * calc.years)}</td>
+                </tr>
+                <tr className="border-t border-neutral-200 dark:border-white/10 bg-amber-500/5 dark:bg-amber-500/10 font-bold text-amber-900 dark:text-amber-300">
+                  <td className="py-3 px-4">Net Economic Benefit / ROI</td>
+                  <td className="py-3 px-4 text-right font-mono">{formatMoney(calc.totalCurrentAnnual)}</td>
+                  <td className="py-3 px-4 text-right font-mono">{formatMoney(calc.annualNetBenefit)}</td>
+                  <td className="py-3 px-4 text-right font-mono text-emerald-600 dark:text-emerald-400">+{formatMoney(calc.netBenefit)} ({calc.roiPct.toFixed(1)}%)</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </section>
       </main>
@@ -1397,5 +1217,19 @@ export default function PamCalculatorPage() {
         <Footer />
       </div>
     </div>
+  );
+}
+
+export default function PamCalculatorPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-neutral-50 dark:bg-neutral-950 text-neutral-600 dark:text-neutral-400">
+          Loading PAM ROI Calculator...
+        </div>
+      }
+    >
+      <PamCalculatorContent />
+    </Suspense>
   );
 }

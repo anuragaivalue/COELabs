@@ -1559,5 +1559,669 @@
       "mid": "Healthy expansion path. Attach across multiple domains for measurable outcomes.",
       "low": "To increase multiplier, attach across at least 3 domains with measurable outcomes."
     }
+  },
+  "cloudsecuritymultiplier": {
+    "slug": "cloudsecuritymultiplier",
+    "type": "grid",
+    "title": "Stack Multiplier for Cloud Security (CNAPP)",
+    "badge": "Cloud Security Multiplier",
+    "desc": "Select your anchor (CNAPP Core Platform) to define the baseline; add-ons and multiplier update in real time.",
+    "anchor": "CNAPP Core Platform",
+    "capabilities": [
+      {
+        "name": "CNAPP Core Platform",
+        "price": 180,
+        "desc": "Unified cloud-native application protection platform combining agentless posture and runtime protection.",
+        "isAnchor": true
+      },
+      {
+        "name": "Cloud Workload Protection (CWPP)",
+        "price": 75,
+        "desc": "Runtime threat detection and malware prevention across VMs, containers, and serverless compute.",
+        "isAnchor": false
+      },
+      {
+        "name": "Cloud Security Posture Mgmt (CSPM)",
+        "price": 60,
+        "desc": "Continuous misconfiguration discovery and compliance benchmarking across multi-cloud environments.",
+        "isAnchor": false
+      },
+      {
+        "name": "Cloud Infrastructure Entitlement Mgmt (CIEM)",
+        "price": 55,
+        "desc": "Granular cloud identity entitlements, least-privilege analysis, and unused permission pruning.",
+        "isAnchor": false
+      },
+      {
+        "name": "Kubernetes Security Posture (KSPM)",
+        "price": 65,
+        "desc": "K8s cluster admission controls, RBAC auditing, and pod security policy verification.",
+        "isAnchor": false
+      },
+      {
+        "name": "Container Runtime Security",
+        "price": 70,
+        "desc": "Real-time process profiling, behavioral drift detection, and automated pod quarantine.",
+        "isAnchor": false
+      },
+      {
+        "name": "Infrastructure-as-Code (IaC) Scanning",
+        "price": 45,
+        "desc": "Pre-deployment Terraform, CloudFormation, and Helm misconfiguration detection in CI/CD.",
+        "isAnchor": false
+      },
+      {
+        "name": "Cloud Detection & Response (CDR)",
+        "price": 85,
+        "desc": "Cloud control-plane audit telemetry analytics and real-time MITRE ATT&CK cloud tactics detection.",
+        "isAnchor": false
+      },
+      {
+        "name": "Container Image Registry Scanning",
+        "price": 40,
+        "desc": "Automated vulnerability and malware scanning across container registries before deployment.",
+        "isAnchor": false
+      },
+      {
+        "name": "Serverless Function Security",
+        "price": 50,
+        "desc": "API invocation profiling, cold-start vulnerability checks, and least-privilege role scoping.",
+        "isAnchor": false
+      },
+      {
+        "name": "Cloud Secrets Scanning",
+        "price": 35,
+        "desc": "Automated discovery of hardcoded API keys, tokens, and credentials in cloud repositories.",
+        "isAnchor": false
+      },
+      {
+        "name": "Cloud API Security & Discovery",
+        "price": 65,
+        "desc": "Continuous cataloging of internal and public APIs with OWASP API Top 10 threat detection.",
+        "isAnchor": false
+      },
+      {
+        "name": "SaaS Security Posture Mgmt (SSPM)",
+        "price": 55,
+        "desc": "Automated security configuration reviews and OAuth app monitoring across SaaS applications.",
+        "isAnchor": false
+      },
+      {
+        "name": "Cloud Network Security & Microsegmentation",
+        "price": 80,
+        "desc": "Zero-trust network policy enforcement and VPC flow traffic anomaly inspection.",
+        "isAnchor": false
+      },
+      {
+        "name": "Multi-Cloud Compliance Evidence",
+        "price": 50,
+        "desc": "Automated continuous audit evidence collection for SOC 2, ISO 27001, and CIS benchmarks.",
+        "isAnchor": false
+      },
+      {
+        "name": "Cloud Forensic Telemetry & Incident Audit",
+        "price": 75,
+        "desc": "Immutable forensic snapshot capture and point-in-time state reconstruction for cloud breaches.",
+        "isAnchor": false
+      },
+      {
+        "name": "Automated Misconfiguration Remediation",
+        "price": 60,
+        "desc": "Zero-touch guardrails and pull-request auto-fix generation for cloud misconfigurations.",
+        "isAnchor": false
+      }
+    ],
+    "tips": {
+      "noAnchor": "Select your anchor (CNAPP Core Platform) first.",
+      "high": "Strong cloud defense. Next: extend agentless posture to runtime guardrails and automated IaC remediation.",
+      "mid": "Healthy expansion path. Attach CWPP, CIEM, and K8s admission controls to establish cloud defense-in-depth.",
+      "low": "To increase multiplier, attach across posture management, runtime protection, and IaC pipeline controls."
+    }
+  },
+  "datasecuritymultiplier": {
+    "slug": "datasecuritymultiplier",
+    "type": "grid",
+    "title": "Stack Multiplier for Data Security (DSPM)",
+    "badge": "Data Security Multiplier",
+    "desc": "Select your anchor (Data Discovery & Classification Engine) to define the baseline; add-ons and multiplier update in real time.",
+    "anchor": "Data Discovery & Classification Engine",
+    "capabilities": [
+      {
+        "name": "Data Discovery & Classification Engine",
+        "price": 150,
+        "desc": "Automated continuous AI/ML discovery and classification across structured and unstructured data repositories.",
+        "isAnchor": true
+      },
+      {
+        "name": "Data Security Posture Management (DSPM)",
+        "price": 85,
+        "desc": "Continuous data risk posture, shadow data identification, and data access exposure analysis.",
+        "isAnchor": false
+      },
+      {
+        "name": "Data Loss Prevention (Endpoint DLP)",
+        "price": 70,
+        "desc": "Context-aware data exfiltration prevention across USB, print, clipboard, and browser channels.",
+        "isAnchor": false
+      },
+      {
+        "name": "Network & Cloud DLP",
+        "price": 75,
+        "desc": "Real-time content inspection and policy enforcement across email, web gateways, and cloud storage.",
+        "isAnchor": false
+      },
+      {
+        "name": "Database Activity Monitoring (DAM)",
+        "price": 80,
+        "desc": "Real-time SQL protocol analysis, privileged database inspection, and SQL injection blocking.",
+        "isAnchor": false
+      },
+      {
+        "name": "Hardware Security Module (HSM) Vault",
+        "price": 95,
+        "desc": "FIPS 140-2 Level 3 certified cryptographic hardware for master key storage and signing.",
+        "isAnchor": false
+      },
+      {
+        "name": "Key Management Service (KMS)",
+        "price": 60,
+        "desc": "Centralized cryptographic key lifecycle management, BYOK support, and automated rotation.",
+        "isAnchor": false
+      },
+      {
+        "name": "Data Access Governance (DAG)",
+        "price": 55,
+        "desc": "Entitlement reviews, stale permission revocation, and overprivileged user remediation for file shares.",
+        "isAnchor": false
+      },
+      {
+        "name": "Static & Dynamic Data Masking",
+        "price": 65,
+        "desc": "In-flight and on-disk anonymization of sensitive production records for non-prod environments.",
+        "isAnchor": false
+      },
+      {
+        "name": "Enterprise Tokenization",
+        "price": 70,
+        "desc": "Irreversible token generation for credit cards and PII to drastically reduce compliance scope.",
+        "isAnchor": false
+      },
+      {
+        "name": "Digital Rights Management (DRM)",
+        "price": 50,
+        "desc": "Persistent document encryption with granular dynamic viewing, editing, and expiration policies.",
+        "isAnchor": false
+      },
+      {
+        "name": "Shadow Data & Unstructured Storage Scanning",
+        "price": 60,
+        "desc": "Deep visibility into orphaned snapshots, unmonitored object buckets, and forgotten backups.",
+        "isAnchor": false
+      },
+      {
+        "name": "Data Subject Rights (DSR/Consent Automation)",
+        "price": 50,
+        "desc": "Automated workflow orchestration for user consent management and DPDP/GDPR erasure requests.",
+        "isAnchor": false
+      },
+      {
+        "name": "Privileged Database Access Control",
+        "price": 55,
+        "desc": "Just-in-time database credential brokering and session recording for DBAs and developers.",
+        "isAnchor": false
+      },
+      {
+        "name": "Data Lineage & Risk Mapping",
+        "price": 65,
+        "desc": "Visual tracking of sensitive data provenance, transit hops, and cross-border data transfer flows.",
+        "isAnchor": false
+      },
+      {
+        "name": "Automated Defensible Deletion & Retention",
+        "price": 45,
+        "desc": "Policy-driven automated pruning of expired sensitive files to minimize breach blast radius.",
+        "isAnchor": false
+      },
+      {
+        "name": "DPDP / GDPR Compliance Audit Evidence",
+        "price": 40,
+        "desc": "Out-of-the-box regulatory reporting and statutory audit artifact compilation.",
+        "isAnchor": false
+      }
+    ],
+    "tips": {
+      "noAnchor": "Select your anchor (Data Discovery & Classification Engine) first.",
+      "high": "Strong data defense. Next: enforce zero-trust data access, HSM-backed encryption, and automated DSR fulfillment.",
+      "mid": "Healthy expansion path. Attach DSPM, DAM, and Key Management to protect data at rest and in transit.",
+      "low": "To increase multiplier, attach across classification, posture management, encryption, and DLP enforcement."
+    }
+  },
+  "appsecmultiplier": {
+    "slug": "appsecmultiplier",
+    "type": "grid",
+    "title": "Stack Multiplier for Application Security (AppSec)",
+    "badge": "AppSec Stack Multiplier",
+    "desc": "Select your anchor (Enterprise SAST Platform) to define the baseline; add-ons and multiplier update in real time.",
+    "anchor": "Enterprise SAST Platform",
+    "capabilities": [
+      {
+        "name": "Enterprise SAST Platform",
+        "price": 140,
+        "desc": "Static application security testing integrated into IDEs and CI/CD pipelines for early code flaw detection.",
+        "isAnchor": true
+      },
+      {
+        "name": "Dynamic Application Security Testing (DAST)",
+        "price": 80,
+        "desc": "Automated black-box web vulnerability scanning against running applications and APIs.",
+        "isAnchor": false
+      },
+      {
+        "name": "Software Composition Analysis (SCA)",
+        "price": 65,
+        "desc": "Open-source dependency vulnerability tracking and license compliance risk detection.",
+        "isAnchor": false
+      },
+      {
+        "name": "Software Bill of Materials (SBOM) Management",
+        "price": 50,
+        "desc": "Automated SBOM generation, CycloneDX/SPDX export, and continuous supply chain risk tracking.",
+        "isAnchor": false
+      },
+      {
+        "name": "Runtime Application Self-Protection (RASP)",
+        "price": 85,
+        "desc": "In-app telemetry agent providing real-time attack detection and autonomous vulnerability mitigation.",
+        "isAnchor": false
+      },
+      {
+        "name": "Web Application & API Protection (WAAP)",
+        "price": 95,
+        "desc": "Next-generation cloud WAF, bot mitigation, DDoS scrubbing, and API schema enforcement.",
+        "isAnchor": false
+      },
+      {
+        "name": "Interactive Application Security Testing (IAST)",
+        "price": 75,
+        "desc": "Hybrid gray-box testing combining static instrumentation with automated QA dynamic execution.",
+        "isAnchor": false
+      },
+      {
+        "name": "API Security Testing & Discovery",
+        "price": 70,
+        "desc": "Automated discovery of shadow APIs and automated testing for broken object-level authorization (BOLA).",
+        "isAnchor": false
+      },
+      {
+        "name": "Secrets & Credential Detection in Code",
+        "price": 40,
+        "desc": "Pre-commit and repo-wide scanning for leaked tokens, private keys, and database passwords.",
+        "isAnchor": false
+      },
+      {
+        "name": "CI/CD Pipeline Security Gates",
+        "price": 45,
+        "desc": "Policy-based pull-request blocking and compliance gates enforcing secure build standards.",
+        "isAnchor": false
+      },
+      {
+        "name": "Infrastructure-as-Code (IaC) Security",
+        "price": 50,
+        "desc": "Automated scanning for Terraform, Kubernetes manifests, and Dockerfiles to catch security drift.",
+        "isAnchor": false
+      },
+      {
+        "name": "Container Manifest & Helm Chart Security",
+        "price": 45,
+        "desc": "Static configuration audits for container specifications, capabilities, and root execution prevention.",
+        "isAnchor": false
+      },
+      {
+        "name": "Developer Security Training & Remediation Guidance",
+        "price": 35,
+        "desc": "Contextual micro-learning modules integrated directly into developer pull requests.",
+        "isAnchor": false
+      },
+      {
+        "name": "Open Source License Compliance",
+        "price": 30,
+        "desc": "Automated legal review and reciprocal GPL/copyleft risk flags across all dependencies.",
+        "isAnchor": false
+      },
+      {
+        "name": "Supply Chain Risk Management (SLSA)",
+        "price": 55,
+        "desc": "Cryptographic build provenance, signed commits, and artifact attestation verification.",
+        "isAnchor": false
+      },
+      {
+        "name": "Penetration Testing as a Service (PTaaS)",
+        "price": 90,
+        "desc": "On-demand expert ethical hacking and vulnerability validation for release candidates.",
+        "isAnchor": false
+      },
+      {
+        "name": "AppSec Vulnerability Correlation & Triage",
+        "price": 60,
+        "desc": "Unified dashboard consolidating SAST, DAST, and SCA findings with deduplication and risk scoring.",
+        "isAnchor": false
+      }
+    ],
+    "tips": {
+      "noAnchor": "Select your anchor (Enterprise SAST Platform) first.",
+      "high": "Strong application security stack. Next: enforce RASP runtime protection and secure SLSA build provenance.",
+      "mid": "Healthy expansion path. Attach DAST, SCA, and API protection to establish comprehensive DevSecOps coverage.",
+      "low": "To increase multiplier, attach across testing, open-source composition, and runtime API protection."
+    }
+  },
+  "cyberresiliencemultiplier": {
+    "slug": "cyberresiliencemultiplier",
+    "type": "grid",
+    "title": "Stack Multiplier for Cyber Resilience & Ransomware",
+    "badge": "Cyber Resilience Multiplier",
+    "desc": "Select your anchor (Air-Gapped Immutable Storage) to define the baseline; add-ons and multiplier update in real time.",
+    "anchor": "Air-Gapped Immutable Storage",
+    "capabilities": [
+      {
+        "name": "Air-Gapped Immutable Storage",
+        "price": 160,
+        "desc": "WORM-compliant, physically or logically isolated storage architecture impenetrable to ransomware tampering.",
+        "isAnchor": true
+      },
+      {
+        "name": "Automated DR Orchestration",
+        "price": 85,
+        "desc": "One-click failover and failback workflow automation for multi-tier enterprise applications.",
+        "isAnchor": false
+      },
+      {
+        "name": "Instant Ransomware Rollback & Snapshot Recovery",
+        "price": 90,
+        "desc": "Sub-minute pointer-based recovery to the exact second prior to malware detonation.",
+        "isAnchor": false
+      },
+      {
+        "name": "Isolated Clean Room Recovery Environment",
+        "price": 95,
+        "desc": "Zero-trust sandbox environment for unquarantining backups and performing safe malware forensic analysis.",
+        "isAnchor": false
+      },
+      {
+        "name": "Continuous Data Protection (CDP)",
+        "price": 75,
+        "desc": "Near-zero RPO continuous block-level journal replication for Tier-1 mission-critical databases.",
+        "isAnchor": false
+      },
+      {
+        "name": "Backup Anomaly & Threat Detection",
+        "price": 65,
+        "desc": "Machine learning entropy analysis detecting early mass encryption attempts and data wipe commands.",
+        "isAnchor": false
+      },
+      {
+        "name": "Secondary Forensic Image Extraction",
+        "price": 60,
+        "desc": "Automated preservation of infected machine memory and disk state for CERT-In regulatory submission.",
+        "isAnchor": false
+      },
+      {
+        "name": "Cyber Recovery Vault Orchestration",
+        "price": 80,
+        "desc": "Automated operational air-gap synchronization with multi-party approval controls for vault access.",
+        "isAnchor": false
+      },
+      {
+        "name": "Active Directory Disaster Forest Recovery",
+        "price": 70,
+        "desc": "Automated clean-state Active Directory rebuild and kerberos krbtgt account rotation.",
+        "isAnchor": false
+      },
+      {
+        "name": "Bare-Metal System State Recovery",
+        "price": 55,
+        "desc": "Rapid hardware-agnostic OS image restoration for bare-metal servers and hypervisor nodes.",
+        "isAnchor": false
+      },
+      {
+        "name": "Multi-Cloud Backup Replication",
+        "price": 65,
+        "desc": "Asynchronous cross-cloud data replication to neutralize single-provider regional outages.",
+        "isAnchor": false
+      },
+      {
+        "name": "Air-Gap Network Isolation Policy",
+        "price": 50,
+        "desc": "Automated network disconnect triggers isolating backup networks during active breach alerts.",
+        "isAnchor": false
+      },
+      {
+        "name": "Automated Non-Disruptive Recovery Drills",
+        "price": 55,
+        "desc": "Scheduled automated sandbox recovery testing without impacting live production systems.",
+        "isAnchor": false
+      },
+      {
+        "name": "Zero-Trust Storage Access Control",
+        "price": 50,
+        "desc": "Four-eyes multi-administrator authorization required for any snapshot deletion or retention change.",
+        "isAnchor": false
+      },
+      {
+        "name": "Cryptographic Backup Integrity Verification",
+        "price": 45,
+        "desc": "Automated cryptographic checksum comparison guaranteeing zero bit-rot or silent tampering.",
+        "isAnchor": false
+      },
+      {
+        "name": "SOC Integration for Outage Telemetry",
+        "price": 40,
+        "desc": "Bi-directional SIEM/SOAR connectors synchronizing storage alerts with security incident responders.",
+        "isAnchor": false
+      },
+      {
+        "name": "RTO/RPO SLA Compliance Reporting",
+        "price": 35,
+        "desc": "Real-time executive dashboards reporting enterprise recovery readiness against statutory SLAs.",
+        "isAnchor": false
+      }
+    ],
+    "tips": {
+      "noAnchor": "Select your anchor (Air-Gapped Immutable Storage) first.",
+      "high": "Strong resilience stack. Next: validate automated DR failover playbooks and test clean-room recovery drills.",
+      "mid": "Healthy expansion path. Attach DR orchestration, clean room isolation, and continuous backup anomaly scanning.",
+      "low": "To increase multiplier, attach across immutable storage, automated orchestration, and forensic recovery."
+    }
+  },
+  "healthcaremultiplier": {
+    "slug": "healthcaremultiplier",
+    "type": "domain",
+    "title": "Stack Multiplier for Healthcare & Life Sciences",
+    "badge": "Healthcare Stack Multiplier",
+    "desc": "Select a Healthcare domain using the buttons, then attach capabilities. Set one capability as the anchor to define the baseline; totals and multiplier update in real time.",
+    "defaultPrice": 50,
+    "domains": {
+      "Governance": [
+        "Health Data Governance (HIPAA/NABH)",
+        "Medical Device Security Policy",
+        "Third-Party Associate Risk (BAA)",
+        "Clinical Incident Response Drills",
+        "Patient Consent & DPDP Management",
+        "Healthcare Regulatory Audit Readiness"
+      ],
+      "Identity": [
+        "Clinical SSO & Fast User Switching",
+        "Physician EPCS / Biometric MFA",
+        "Privileged Access Management (PAM)",
+        "Role-Based EMR/EHR Access Governance",
+        "Identity Threat Detection (ITDR)",
+        "Contractor & Locum Doctor Lifecycle"
+      ],
+      "Medical IoT/IoMT": [
+        "IoMT Medical Device Discovery & Profiling",
+        "Bedside Telemetry Risk Scoring",
+        "VLAN Microsegmentation for IoMT",
+        "Medical Equipment Anomaly Detection",
+        "IoMT Firmware Vulnerability Management",
+        "Connected Infusion Pump Safeguards"
+      ],
+      "Data": [
+        "Protected Health Information (PHI) Discovery",
+        "EMR/EHR Database Encryption & KMS",
+        "Clinical Data Loss Prevention (DLP)",
+        "Health Information Exchange (HIE) Security",
+        "Defensible PHI Retention & Archival",
+        "Diagnostic Image (DICOM) Vault Security"
+      ],
+      "Endpoint": [
+        "Clinical Workstation Protection (EDR)",
+        "Nurse Station Terminal Hardening",
+        "Removable Media & USB Lockout",
+        "Virtual Desktop Infrastructure (VDI) Security",
+        "Host Intrusion Prevention for Legacy Medical OS",
+        "Medical Tablet & Mobile Device Management"
+      ],
+      "SOC/Resilience": [
+        "Healthcare 24/7 SIEM/SOAR",
+        "Clinical Ransomware Containment Playbooks",
+        "Air-Gapped Immutable EMR Backups",
+        "Hospital Clean-Room Recovery Drills",
+        "Medical Device Threat Intelligence",
+        "Emergency Care Continuity Assurance"
+      ]
+    },
+    "tips": {
+      "noAnchor": "Set an anchor first (baseline capability).",
+      "high": "Strong healthcare security posture. Next: harden clinical endpoints, enforce IoMT microsegmentation, and validate immutable EMR backups.",
+      "mid": "Healthy expansion path. Attach across clinical identity, IoMT discovery, PHI encryption, and resilient backups.",
+      "low": "To increase multiplier, attach across at least 3 domains with measurable clinical patient-safety outcomes."
+    }
+  },
+  "telecommultiplier": {
+    "slug": "telecommultiplier",
+    "type": "domain",
+    "title": "Stack Multiplier for Telecom & 5G Service Providers",
+    "badge": "Telecom Stack Multiplier",
+    "desc": "Select a Telecom domain using the buttons, then attach capabilities. Set one capability as the anchor to define the baseline; totals and multiplier update in real time.",
+    "defaultPrice": 50,
+    "domains": {
+      "Governance": [
+        "Telecom Regulatory Compliance (DoT / TRAI)",
+        "National Security Directive on Telecom (NSDTS)",
+        "Supply Chain Trusted Source Validation",
+        "Critical Telecom Infrastructure Drills",
+        "Subscriber Privacy & DPDP Framework",
+        "Telecom Security Audit Certification"
+      ],
+      "5G Core": [
+        "5G Core Network Security (3GPP Rel 16/17)",
+        "Virtual Network Function (VNF) Hardening",
+        "gNodeB Base Station Integrity & PKI",
+        "Network Slicing Security Isolation",
+        "Diameter / SS7 / HTTP/2 Signalling Firewalls",
+        "SEPP Inter-Operator Roaming Protection"
+      ],
+      "Identity": [
+        "NOC / SOC Privileged Access Management (PAM)",
+        "Network Engineer Ephemeral Zero-Trust Access",
+        "Telco Workforce MFA & Adaptive Auth",
+        "Multi-Tenant Partner & Reseller Federation",
+        "Telecom Infrastructure Threat Detection (ITDR)",
+        "Automated Field Technician Session Audit"
+      ],
+      "Cloud/NFV": [
+        "Telco Cloud Workload Protection (CWPP)",
+        "Kubernetes / Container Security for CNFs",
+        "Edge Cloud Multi-Access (MEC) Security",
+        "Software-Defined Network (SDN) Microsegmentation",
+        "Telco Cloud Posture Management (CSPM)",
+        "Carrier Infrastructure IaC Pipeline Gates"
+      ],
+      "Subscriber Data": [
+        "CDR (Call Detail Record) Vault Encryption & KMS",
+        "Subscriber PII Data Discovery & DSPM",
+        "SIM-Swap Fraud Detection & Defense",
+        "Mobile Subscriber Data Loss Prevention",
+        "Lawful Intercept Vault Isolation & Access Audit",
+        "Telecom Data Masking for Billing Analytics"
+      ],
+      "SOC": [
+        "Telecom Threat Intelligence & Carrier DDoS Defense",
+        "Telco Central SIEM & Big Data Telemetry Ingest",
+        "Automated Signalling Threat Response (SOAR)",
+        "BGP Route Hijack & Carrier DNS Protection",
+        "Telecom Carrier Forensics & Incident Readiness",
+        "Critical Infrastructure SOC Escalation Mesh"
+      ]
+    },
+    "tips": {
+      "noAnchor": "Set an anchor first (baseline capability).",
+      "high": "Strong telecom carrier defense. Next: harden 5G network slices, enforce ephemeral NOC PAM, and automate signaling DDoS scrubbing.",
+      "mid": "Healthy expansion path. Attach across 5G core firewalls, subscriber PII protection, and cloud NFV isolation.",
+      "low": "To increase multiplier, attach across at least 3 domains with critical network availability outcomes."
+    }
+  },
+  "govmultiplier": {
+    "slug": "govmultiplier",
+    "type": "domain",
+    "title": "Stack Multiplier for Government & Defense",
+    "badge": "Government Stack Multiplier",
+    "desc": "Select a Government domain using the buttons, then attach capabilities. Set one capability as the anchor to define the baseline; totals and multiplier update in real time.",
+    "defaultPrice": 50,
+    "domains": {
+      "Mandates": [
+        "National Cybersecurity Policy & CERT-In Mandates",
+        "Critical Information Infrastructure (NCIIPC Guidelines)",
+        "Cyber Crisis Management Plan (CCMP)",
+        "Third-Party Public Sector Audit Readiness",
+        "Government Data Classification Guidelines",
+        "Defense Procurement Security Standard (MoD)"
+      ],
+      "Citizen Identity": [
+        "Aadhaar Data Vault Security & Hardware HSM Isolation",
+        "Citizen Portal SSO & Adaptive Step-Up Auth",
+        "Government Employee Privileged Identity (PIM)",
+        "Zero-Trust Access for Field & Remote Officers",
+        "Identity Threat & Biometric Anomaly Detection",
+        "Government Contractor Identity Lifecycle"
+      ],
+      "Infrastructure": [
+        "State Data Center (SDC) Perimeter Hardening",
+        "National Knowledge Network (NKN) Segmentation",
+        "Government Cloud (MeghRaj) Workload Security",
+        "Air-Gapped Sovereign Network Segregation",
+        "Public Infrastructure Anti-DDoS Mitigation",
+        "State Wide Area Network (SWAN) Boundary Defense"
+      ],
+      "Sovereign Data": [
+        "Sovereign Data Discovery & Classification",
+        "State Citizen Registry Encryption & KMS",
+        "Government Data Loss Prevention (GovDLP)",
+        "Hardware Security Modules (HSM) for PKI Signatures",
+        "Secure Disposal & Defensible Data Destruction",
+        "Classified Records Archival & Air-Gap Vault"
+      ],
+      "Endpoint": [
+        "Government Official Workstation EDR & Hardening",
+        "Official Mobile Device Management (GovMDM)",
+        "Removable Media & USB Whitelisting",
+        "Official Government Email & Anti-Phishing Security",
+        "Secure Offline Patch Verification",
+        "Isolated Red/Black Boundary Terminal Systems"
+      ],
+      "SOC/Cyber Warfare": [
+        "National Security Operations Center (Gov-SOC)",
+        "State-Sponsored Threat Attribution & CTI",
+        "Dark Web Intelligence for Public Sector Leaks",
+        "National Sovereign Cyber Range Drills",
+        "Critical Infrastructure Air-Gapped Cyber Resilience",
+        "Incident Readiness for CERT-In 6-Hour Reporting"
+      ]
+    },
+    "tips": {
+      "noAnchor": "Set an anchor first (baseline capability).",
+      "high": "Strong sovereign defense posture. Next: enforce zero trust across citizen vaults, isolate critical infrastructure, and operationalize 6-hour CERT-In response.",
+      "mid": "Healthy expansion path. Attach across citizen identity, SDC infrastructure hardening, sovereign data encryption, and Gov-SOC.",
+      "low": "To increase multiplier, attach across at least 3 domains with national mission-critical outcomes."
+    }
   }
 }

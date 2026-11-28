@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 50" fill="none" role="img" aria-label="Virtuozzo Logo (Dark Mode)">
+  <!-- Virtuozzo Hexagonal "V" Node in Vibrant Teal -->
+  <g transform="translate(10, 8)">
+    <path d="M17 2l13 7.5v15L17 32 4 24.5v-15L17 2z" stroke="#14B8A6" stroke-width="3" fill="#14B8A6" fill-opacity="0.2" stroke-linejoin="round"/>
+    <path d="M9 11l8 13 8-13" stroke="#2DD4BF" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <!-- Virtuozzo Wordmark (Dark Mode) -->
+  <text x="50" y="32" font-family="system-ui, -apple-system, sans-serif" font-weight="800" font-size="22" fill="#FFFFFF" letter-spacing="-0.3">virtuozzo</text>
+</svg>

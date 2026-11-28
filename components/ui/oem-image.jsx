@@ -3,8 +3,15 @@
 import React, { useState } from "react";
 import { IValueEmblem } from "@/components/ui/ivalue-logo";
 
-export function OemImage({ src, alt, className = "h-10 w-auto object-contain", placeholderClassName }) {
+export function OemImage({
+  src,
+  darkSrc,
+  alt,
+  className = "h-10 w-auto object-contain",
+  placeholderClassName
+}) {
   const [error, setError] = useState(false);
+  const [darkError, setDarkError] = useState(false);
 
   if (error || !src) {
     return (
@@ -17,6 +24,29 @@ export function OemImage({ src, alt, className = "h-10 w-auto object-contain", p
           {alt || "OEM"}
         </span>
       </div>
+    );
+  }
+
+  if (darkSrc && darkSrc !== src && !darkError) {
+    return (
+      <>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={src}
+          alt={alt || "OEM Partner"}
+          onError={() => setError(true)}
+          loading="lazy"
+          className={`${className} dark:hidden`}
+        />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={darkSrc}
+          alt={alt || "OEM Partner"}
+          onError={() => setDarkError(true)}
+          loading="lazy"
+          className={`${className} hidden dark:block`}
+        />
+      </>
     );
   }
 

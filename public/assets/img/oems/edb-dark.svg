@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 50" fill="none" role="img" aria-label="EDB Logo (Dark Mode)">
+  <!-- EDB Tri-Loop Node in Radiant Red -->
+  <g transform="translate(10, 8)">
+    <circle cx="16" cy="12" r="9" stroke="#EF4444" stroke-width="3.5" fill="none" opacity="0.95"/>
+    <circle cx="10" cy="22" r="9" stroke="#F97316" stroke-width="3.5" fill="none" opacity="0.95"/>
+    <circle cx="22" cy="22" r="9" stroke="#EF4444" stroke-width="3.5" fill="none" opacity="0.95"/>
+    <circle cx="16" cy="18" r="3" fill="#EF4444"/>
+  </g>
+  <!-- EDB Wordmark (Dark Mode: White) -->
+  <text x="52" y="34" font-family="system-ui, -apple-system, sans-serif" font-weight="900" font-size="28" fill="#FFFFFF" letter-spacing="-0.5">edb</text>
+  <rect x="110" y="27" width="6" height="6" fill="#EF4444" rx="1.5"/>
+</svg>

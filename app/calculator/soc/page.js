@@ -1,10 +1,13 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, Suspense } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
 import { CalculatorNav } from "@/components/calculators/calculator-nav";
+import { formatCurrency as formatCurrencyUtil, getCurrencySymbol } from "@/lib/currency";
+import { exportSectionsToCSV, triggerPrint } from "@/lib/export-utils";
 import {
   LuShieldCheck,
   LuCalculator,
@@ -22,9 +25,12 @@ import {
   LuWrench,
   LuSlidersHorizontal,
   LuLayers,
+  LuDownload,
+  LuBot,
+  LuFileSpreadsheet
 } from "react-icons/lu";
 
-// Default configuration from MAIN site
+// Default configuration with AI-SOC & Autonomous Triage
 const SOC_DEFAULTS = {
   // Current security posture
   currentSpend: 300000,
@@ -34,6 +40,11 @@ const SOC_DEFAULTS = {
   avgBreachCost: 4000000,
   mttdHours: 200,
   mttrHours: 70,
+
+  // AI-SOC & Autonomous Triage
+  monthlyAlertVolume: 45000,
+  autoTriagePct: 65,
+  analystHourlyCost: 45,
 
   // SOC investment – tooling & personnel
   initialTooling: 150000,
@@ -57,20 +68,35 @@ const SOC_DEFAULTS = {
   downtimeCostHour: 10000,
 };
 
-function formatCurrency(val) {
-  if (!Number.isFinite(val)) return "$0";
-  const sign = val < 0 ? "-" : "";
-  const abs = Math.abs(val);
-  return `${sign}$${abs.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
-}
-
 function formatPercent(val) {
   if (!Number.isFinite(val)) return "–";
   return `${val.toFixed(1)}%`;
 }
 
-export default function SocCalculatorPage() {
-  const [inputs, setInputs] = useState(SOC_DEFAULTS);
+function SocCalculatorContent() {
+  const searchParams = useSearchParams();
+  const investmentParam = searchParams?.get("investment");
+  const currencyParam = searchParams?.get("currency");
+
+  const [inputs, setInputs] = useState(() => {
+    let base = { ...SOC_DEFAULTS };
+    if (investmentParam) {
+      const parsed = parseFloat(investmentParam);
+      if (!isNaN(parsed) && parsed > 0) {
+        base.initialTooling = parsed < 10000 ? parsed * 1000 : parsed;
+      }
+    }
+    return base;
+  });
+
+  const [currency, setCurrency] = useState(() =>
+    currencyParam?.toUpperCase() === "INR" ? "INR" : "USD"
+  );
+
+  // Local currency formatter wrapper
+  const formatMoney = (val, compact = false) => {
+    return formatCurrencyUtil(val, currency, compact);
+  };
 
   const handleInputChange = (field, value) => {
     const num = parseFloat(value);
@@ -85,10 +111,10 @@ export default function SocCalculatorPage() {
   };
 
   const handlePrint = () => {
-    window.print();
+    triggerPrint();
   };
 
-  // Mathematical logic identical to MAIN counterpart
+  // Mathematical logic with AI-SOC, Autonomous Triage and ROSI calculation
   const results = useMemo(() => {
     const {
       incidentsPerYear,
@@ -97,6 +123,9 @@ export default function SocCalculatorPage() {
       avgBreachCost,
       mttdHours,
       mttrHours,
+      monthlyAlertVolume,
+      autoTriagePct,
+      analystHourlyCost,
       initialTooling,
       annualPlatform,
       analystCount,
@@ -121,6 +150,12 @@ export default function SocCalculatorPage() {
     const annualBreachCostBefore = annualizedMajorBreaches * avgBreachCost;
     const annualLossBefore = annualIncidentCostBefore + annualBreachCostBefore;
 
+    // AI Autonomous Triage savings
+    // Assumes Tier-1 manual alert triage averages 10 mins (0.1667 hrs) per alert
+    const monthlyTriagedAlerts = monthlyAlertVolume * (autoTriagePct / 100);
+    const monthlyHoursSaved = (monthlyTriagedAlerts * 10) / 60;
+    const aiAnnualSavings = monthlyHoursSaved * analystHourlyCost * 12;
+
     // SOC personnel cost
     const socPersonnel =
       analystCount * analystSalary +
@@ -143,7 +178,7 @@ export default function SocCalculatorPage() {
       downtimeCostHour;
 
     const annualBenefits =
-      incidentSavings + breachSavings + downtimeSavings + complianceSavings;
+      incidentSavings + breachSavings + downtimeSavings + complianceSavings + aiAnnualSavings;
 
     // Upfront and recurring investment
     const initialInvestment = initialTooling + implementationCost;
@@ -159,6 +194,12 @@ export default function SocCalculatorPage() {
     const totalCosts5y = initialInvestment + socOperatingAnnual * 5;
     const net5y = totalBenefits5y - totalCosts5y;
     const roi5y = totalCosts5y > 0 ? (net5y / totalCosts5y) * 100 : 0;
+
+    // Return on Security Investment (ROSI %)
+    // Standard Formula: ROSI = ((Monetary Risk Reduction & Savings - Security Solution Cost) / Security Solution Cost) * 100
+    const annualizedCosts = initialInvestment / 3 + socOperatingAnnual;
+    const rosiAnnual = annualizedCosts > 0 ? ((annualBenefits - annualizedCosts) / annualizedCosts) * 100 : 0;
+    const rosi3y = totalCosts3y > 0 ? ((totalBenefits3y - totalCosts3y) / totalCosts3y) * 100 : 0;
 
     // Payback period in months
     const monthlyBenefit = annualBenefits / 12;
@@ -183,6 +224,9 @@ export default function SocCalculatorPage() {
       annualIncidentCostBefore,
       annualBreachCostBefore,
       annualLossBefore,
+      monthlyTriagedAlerts,
+      monthlyHoursSaved,
+      aiAnnualSavings,
       socPersonnel,
       socOperatingAnnual,
       incidentSavings,
@@ -198,6 +242,8 @@ export default function SocCalculatorPage() {
       totalCosts5y,
       roi5y,
       net5y,
+      rosiAnnual,
+      rosi3y,
       paybackMonths,
       years,
       lossData,
@@ -205,6 +251,62 @@ export default function SocCalculatorPage() {
       cumulativeSavings,
     };
   }, [inputs]);
+
+  // Handle CSV export
+  const handleExportCSV = () => {
+    const sections = [
+      {
+        title: "Executive Summary & ROSI",
+        items: [
+          ["Currency", currency, ""],
+          ["3-Year ROI", formatPercent(results.roi3y), "Total return over 3 years"],
+          ["3-Year ROSI", formatPercent(results.rosi3y), "Return on Security Investment"],
+          ["Annualized ROSI", formatPercent(results.rosiAnnual), "Annual Risk Reduction vs Cost"],
+          ["5-Year ROI", formatPercent(results.roi5y), "Total return over 5 years"],
+          ["Net 3-Year Value", formatMoney(results.net3y), "Net economic value over 3 years"],
+          ["Payback Period", `${results.paybackMonths || "N/A"} Months`, "Estimated break-even time"],
+          ["Annual Benefits", formatMoney(results.annualBenefits), "Recurring annual risk & efficiency value"],
+          ["Initial Investment", formatMoney(results.initialInvestment), "Upfront capital tooling & implementation"],
+        ],
+      },
+      {
+        title: "AI-SOC & Autonomous Triage Metrics",
+        items: [
+          ["Monthly Alert Volume", inputs.monthlyAlertVolume, "Security alerts received monthly"],
+          ["Autonomously Triaged by AI", `${inputs.autoTriagePct}%`, "% triaged without human intervention"],
+          ["Alerts Handled by AI / Month", Math.round(results.monthlyTriagedAlerts), "Automated triage count"],
+          ["Analyst Hours Saved / Month", Math.round(results.monthlyHoursSaved), "Assumes 10 mins per alert triage"],
+          ["Analyst Hourly Rate", formatMoney(inputs.analystHourlyCost), "Fully loaded frontline rate"],
+          ["Annual AI Automation Savings", formatMoney(results.aiAnnualSavings), "Direct labor & toil savings"],
+        ],
+      },
+      {
+        title: "Current Security Posture & Baseline Loss",
+        items: [
+          ["Security Incidents / Year", inputs.incidentsPerYear, "Requiring active investigation"],
+          ["Average Incident Cost", formatMoney(inputs.avgIncidentCost), "Direct triage & remediation"],
+          ["Major Breaches (5-Year)", inputs.majorBreaches5y, "Significant data or operational breaches"],
+          ["Average Breach Cost", formatMoney(inputs.avgBreachCost), "Regulatory, recovery & legal damages"],
+          ["MTTD (Hours to Detect)", inputs.mttdHours, "Mean time to detect anomalies"],
+          ["MTTR (Hours to Remediate)", inputs.mttrHours, "Mean time to contain and resolve"],
+          ["Baseline Annual Loss", formatMoney(results.annualLossBefore), "Expected annual financial loss"],
+        ],
+      },
+      {
+        title: "SOC Investment – Tooling & Personnel",
+        items: [
+          ["Initial Tooling Cost", formatMoney(inputs.initialTooling), "Upfront SIEM, SOAR, EDR licenses"],
+          ["Implementation Cost", formatMoney(inputs.implementationCost), "Architecture, rule tuning, integrations"],
+          ["Annual Platform Cost", formatMoney(inputs.annualPlatform), "Cloud ingest and recurring subscriptions"],
+          ["SOC Personnel Cost", formatMoney(results.socPersonnel), "Analysts, engineers & managers compensation"],
+          ["Annual Training Budget", formatMoney(inputs.trainingBudget), "Skills, certifications & adversary sims"],
+          ["Total Operating Cost (Opex/yr)", formatMoney(results.socOperatingAnnual), "Recurring annual budget"],
+        ],
+      },
+    ];
+
+    exportSectionsToCSV("soc-roi-analysis.csv", sections);
+  };
 
   // Max value for bar chart scaling
   const maxBarValue = Math.max(
@@ -234,7 +336,7 @@ export default function SocCalculatorPage() {
             <LuChevronRight className="size-3.5" />
             <span>Accelerators</span>
             <LuChevronRight className="size-3.5" />
-            <span className="text-neutral-800 dark:text-neutral-200 font-medium">SOC ROI Calculator</span>
+            <span className="text-neutral-800 dark:text-neutral-200 font-medium">SOC ROI & ROSI Calculator</span>
           </nav>
 
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-neutral-200 dark:border-white/10 pb-6">
@@ -244,27 +346,68 @@ export default function SocCalculatorPage() {
                 <span>Security Operations Center</span>
               </div>
               <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight text-neutral-900 dark:text-white">
-                SOC ROI Calculator
+                SOC ROI & ROSI Calculator
               </h1>
               <p className="mt-1.5 text-sm sm:text-base text-neutral-600 dark:text-neutral-400 max-w-3xl">
-                Quantify the business value, risk mitigation, and operational return on investment from deploying an enterprise Security Operations Center (SOC).
+                Quantify the business value, AI autonomous triage savings, risk mitigation, and Return on Security Investment (ROSI) from deploying an enterprise SOC.
               </p>
             </div>
 
-            <div className="flex items-center gap-2 print:hidden shrink-0">
+            <div className="flex flex-wrap items-center gap-2 print:hidden shrink-0">
+              {/* Currency Toggle */}
+              <div className="inline-flex items-center rounded-xl border border-neutral-200 dark:border-white/15 bg-white dark:bg-neutral-900 p-1 shadow-2xs">
+                <button
+                  type="button"
+                  onClick={() => setCurrency("USD")}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    currency === "USD"
+                      ? "bg-amber-600 text-white shadow-xs"
+                      : "text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white"
+                  }`}
+                >
+                  USD ($)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCurrency("INR")}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    currency === "INR"
+                      ? "bg-amber-600 text-white shadow-xs"
+                      : "text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white"
+                  }`}
+                >
+                  INR (₹)
+                </button>
+              </div>
+
+              {/* Reset Defaults */}
               <button
+                type="button"
                 onClick={handleReset}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-medium rounded-lg border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-900 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-900 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
               >
                 <LuRotateCcw className="size-3.5" />
-                <span>Reset Defaults</span>
+                <span>Reset</span>
               </button>
+
+              {/* CSV Export */}
               <button
+                type="button"
+                onClick={handleExportCSV}
+                className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-900 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
+              >
+                <LuFileSpreadsheet className="size-3.5 text-emerald-600 dark:text-emerald-400" />
+                <span>Export CSV</span>
+              </button>
+
+              {/* PDF / Print */}
+              <button
+                type="button"
                 onClick={handlePrint}
-                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-lg bg-amber-600 hover:bg-amber-700 text-white shadow-xs transition-colors cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-lg bg-amber-600 hover:bg-amber-700 text-white shadow-xs transition-colors cursor-pointer"
               >
                 <LuPrinter className="size-3.5" />
-                <span>Export / Print</span>
+                <span>Print / PDF</span>
               </button>
             </div>
           </div>
@@ -279,123 +422,125 @@ export default function SocCalculatorPage() {
           <div className="space-y-1">
             <span className="font-bold text-amber-900 dark:text-amber-300">How this model works:</span>
             <p className="text-neutral-600 dark:text-neutral-400 leading-relaxed">
-              This calculator estimates expected financial loss before a SOC by combining annualized incident triage and breach risk. It calculates total upfront capital and operational expenditures across analysts, engineers, and platform software, comparing them against breach prevention, containment velocity (MTTD/MTTR), downtime avoidance, and compliance savings.
+              This calculator quantifies baseline financial exposure and calculates ROI alongside <strong>ROSI (Return on Security Investment)</strong>. It models capital and operational investments across analysts, detection engineering, and SIEM/SOAR platforms, while integrating modern <strong>AI Autonomous Alert Triage</strong> toil reduction, MTTD/MTTR velocity gains, downtime avoidance, and breach mitigation.
             </p>
           </div>
         </div>
 
-        {/* Executive Readout (6 Key Results KPI Cards - Kept Completely Intact) */}
+        {/* Executive Readout (7 Key Results KPI Cards with ROSI %) */}
         <section className="mb-10" aria-label="Key Performance Indicators">
-          <div className="flex items-center gap-2 mb-4">
-            <LuTrendingUp className="size-5 text-amber-600 dark:text-amber-400" />
-            <h2 className="text-lg font-bold text-neutral-900 dark:text-white">
-              Executive Readout & Projections
-            </h2>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <LuTrendingUp className="size-5 text-amber-600 dark:text-amber-400" />
+              <h2 className="text-lg font-bold text-neutral-900 dark:text-white">
+                Executive Readout & ROSI Projections
+              </h2>
+            </div>
+            <div className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">
+              Active Currency: <span className="text-amber-600 dark:text-orange-400 font-bold">{currency} ({getCurrencySymbol(currency)})</span>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3">
             {/* 3-Year ROI */}
-            <div className="rounded-xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-900/80 p-4 shadow-xs">
-              <div className="text-xs font-medium text-neutral-500 dark:text-neutral-400">ROI (3-Year)</div>
-              <div className="mt-1 text-2xl font-extrabold text-amber-600 dark:text-amber-400">
+            <div className="rounded-xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-900/80 p-3.5 shadow-xs">
+              <div className="text-[11px] font-medium text-neutral-500 dark:text-neutral-400">ROI (3-Year)</div>
+              <div className="mt-1 text-xl sm:text-2xl font-extrabold text-amber-600 dark:text-amber-400">
                 {formatPercent(results.roi3y)}
               </div>
-              <div className="mt-1 text-[11px] text-neutral-500 dark:text-neutral-400">
-                Total return over 3 years
+              <div className="mt-0.5 text-[10px] text-neutral-500 dark:text-neutral-400">
+                Total return
+              </div>
+            </div>
+
+            {/* ROSI (Return on Security Investment) */}
+            <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 dark:bg-amber-500/15 p-3.5 shadow-xs">
+              <div className="text-[11px] font-bold text-amber-800 dark:text-amber-300">ROSI (3-Year)</div>
+              <div className="mt-1 text-xl sm:text-2xl font-black text-amber-700 dark:text-amber-300">
+                {formatPercent(results.rosi3y)}
+              </div>
+              <div className="mt-0.5 text-[10px] text-amber-700/80 dark:text-amber-400">
+                Net security return
               </div>
             </div>
 
             {/* 5-Year ROI */}
-            <div className="rounded-xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-900/80 p-4 shadow-xs">
-              <div className="text-xs font-medium text-neutral-500 dark:text-neutral-400">ROI (5-Year)</div>
-              <div className="mt-1 text-2xl font-extrabold text-emerald-600 dark:text-emerald-400">
+            <div className="rounded-xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-900/80 p-3.5 shadow-xs">
+              <div className="text-[11px] font-medium text-neutral-500 dark:text-neutral-400">ROI (5-Year)</div>
+              <div className="mt-1 text-xl sm:text-2xl font-extrabold text-emerald-600 dark:text-emerald-400">
                 {formatPercent(results.roi5y)}
               </div>
-              <div className="mt-1 text-[11px] text-neutral-500 dark:text-neutral-400">
-                Total return over 5 years
+              <div className="mt-0.5 text-[10px] text-neutral-500 dark:text-neutral-400">
+                Long-term horizon
               </div>
             </div>
 
             {/* Payback Period */}
-            <div className="rounded-xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-900/80 p-4 shadow-xs">
-              <div className="text-xs font-medium text-neutral-500 dark:text-neutral-400">Payback Period</div>
-              <div className="mt-1 text-2xl font-extrabold text-neutral-900 dark:text-white">
+            <div className="rounded-xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-900/80 p-3.5 shadow-xs">
+              <div className="text-[11px] font-medium text-neutral-500 dark:text-neutral-400">Payback Period</div>
+              <div className="mt-1 text-xl sm:text-2xl font-extrabold text-neutral-900 dark:text-white">
                 {results.paybackMonths ? `${results.paybackMonths} mo` : "N/A"}
               </div>
-              <div className="mt-1 text-[11px] text-neutral-500 dark:text-neutral-400">
-                Break-even on upfront capex
+              <div className="mt-0.5 text-[10px] text-neutral-500 dark:text-neutral-400">
+                Break-even timeline
               </div>
             </div>
 
-            {/* Net Benefit (5-Year) */}
-            <div className="rounded-xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-900/80 p-4 shadow-xs">
-              <div className="text-xs font-medium text-neutral-500 dark:text-neutral-400">Net Benefit (5Y)</div>
-              <div className="mt-1 text-2xl font-extrabold text-amber-700 dark:text-amber-300">
-                {formatCurrency(results.net5y)}
+            {/* Annual Benefits */}
+            <div className="rounded-xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-900/80 p-3.5 shadow-xs">
+              <div className="text-[11px] font-medium text-neutral-500 dark:text-neutral-400">Annual Benefits</div>
+              <div className="mt-1 text-xl sm:text-2xl font-extrabold text-emerald-600 dark:text-emerald-400 truncate">
+                {formatMoney(results.annualBenefits, true)}
               </div>
-              <div className="mt-1 text-[11px] text-neutral-500 dark:text-neutral-400">
-                Benefits minus total costs
-              </div>
-            </div>
-
-            {/* Annual Net Savings */}
-            <div className="rounded-xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-900/80 p-4 shadow-xs">
-              <div className="text-xs font-medium text-neutral-500 dark:text-neutral-400">Annual Savings</div>
-              <div className="mt-1 text-2xl font-extrabold text-neutral-900 dark:text-white">
-                {formatCurrency(results.annualBenefits)}
-              </div>
-              <div className="mt-1 text-[11px] text-neutral-500 dark:text-neutral-400">
-                Annual benefits with SOC
+              <div className="mt-0.5 text-[10px] text-neutral-500 dark:text-neutral-400">
+                Per year avoided loss
               </div>
             </div>
 
-            {/* Annual Loss Before SOC */}
-            <div className="rounded-xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-900/80 p-4 shadow-xs">
-              <div className="text-xs font-medium text-neutral-500 dark:text-neutral-400">Loss (Before SOC)</div>
-              <div className="mt-1 text-2xl font-extrabold text-rose-600 dark:text-rose-400">
-                {formatCurrency(results.annualLossBefore)}
+            {/* Net 3-Year Value */}
+            <div className="rounded-xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-900/80 p-3.5 shadow-xs">
+              <div className="text-[11px] font-medium text-neutral-500 dark:text-neutral-400">Net 3-Year Value</div>
+              <div className="mt-1 text-xl sm:text-2xl font-extrabold text-neutral-900 dark:text-white truncate">
+                {formatMoney(results.net3y, true)}
               </div>
-              <div className="mt-1 text-[11px] text-neutral-500 dark:text-neutral-400">
-                Current incident + breach loss
+              <div className="mt-0.5 text-[10px] text-neutral-500 dark:text-neutral-400">
+                Net economic benefit
+              </div>
+            </div>
+
+            {/* Initial Investment */}
+            <div className="rounded-xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-900/80 p-3.5 shadow-xs">
+              <div className="text-[11px] font-medium text-neutral-500 dark:text-neutral-400">Initial CapEx</div>
+              <div className="mt-1 text-xl sm:text-2xl font-extrabold text-neutral-900 dark:text-white truncate">
+                {formatMoney(results.initialInvestment, true)}
+              </div>
+              <div className="mt-0.5 text-[10px] text-neutral-500 dark:text-neutral-400">
+                Tooling & deployment
               </div>
             </div>
           </div>
         </section>
 
-        {/* Main Workspace: Side-by-Side Split Architecture */}
+        {/* Main Interactive Grid */}
         <section className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start mb-12">
-          {/* LEFT COLUMN: Vertically Stacked Inputs */}
+          {/* LEFT COLUMN: Input Configuration Panels */}
           <div className="lg:col-span-7 space-y-6">
-            {/* Section 1: Current Security Posture */}
+            {/* Section 1: Current Security Posture & Exposure */}
             <div className="rounded-2xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-900/90 p-6 shadow-xs">
               <div className="border-b border-neutral-200 dark:border-white/10 pb-3 mb-5">
                 <h3 className="text-base font-bold text-neutral-900 dark:text-white flex items-center gap-2">
                   <span className="flex size-6 items-center justify-center rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-400 text-xs font-bold">1</span>
-                  Current Security Posture
+                  Current Security Posture & Incident Costs
                 </h3>
                 <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
-                  Baseline metrics defining current breach probability, incident volumes, and handling costs.
+                  Baseline incident volume, containment velocity, and historical breach impact before deploying SOC capabilities.
                 </p>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                    Current Security Spend ($/year)
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={inputs.currentSpend}
-                    onChange={(e) => handleInputChange("currentSpend", e.target.value)}
-                    className="w-full rounded-lg border border-neutral-300 dark:border-white/15 bg-neutral-50/50 dark:bg-neutral-800/50 px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
-                  />
-                  <p className="mt-1 text-[11px] text-neutral-400">Existing detection tools and personnel spend.</p>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                    Incidents Per Year (count)
+                    Security Incidents / Year
                   </label>
                   <input
                     type="number"
@@ -404,12 +549,12 @@ export default function SocCalculatorPage() {
                     onChange={(e) => handleInputChange("incidentsPerYear", e.target.value)}
                     className="w-full rounded-lg border border-neutral-300 dark:border-white/15 bg-neutral-50/50 dark:bg-neutral-800/50 px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
                   />
-                  <p className="mt-1 text-[11px] text-neutral-400">Security alerts requiring triage and investigation.</p>
+                  <p className="mt-1 text-[11px] text-neutral-400">Security alerts requiring manual triage & investigation.</p>
                 </div>
 
                 <div>
                   <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                    Avg. Incident Cost ($)
+                    Avg. Incident Cost ({getCurrencySymbol(currency)})
                   </label>
                   <input
                     type="number"
@@ -437,7 +582,7 @@ export default function SocCalculatorPage() {
 
                 <div>
                   <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                    Avg. Breach Cost ($)
+                    Avg. Breach Cost ({getCurrencySymbol(currency)})
                   </label>
                   <input
                     type="number"
@@ -463,7 +608,7 @@ export default function SocCalculatorPage() {
                   <p className="mt-1 text-[11px] text-neutral-400">Current mean time to detect active anomalies.</p>
                 </div>
 
-                <div className="sm:col-span-2">
+                <div>
                   <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
                     MTTR (Hours to Remediate)
                   </label>
@@ -479,11 +624,88 @@ export default function SocCalculatorPage() {
               </div>
             </div>
 
-            {/* Section 2: SOC Investment – Tooling & Personnel */}
+            {/* Section 2: AI-SOC & Autonomous Triage (NEW!) */}
+            <div className="rounded-2xl border border-amber-500/30 bg-gradient-to-br from-white via-neutral-50/80 to-amber-50/20 dark:from-neutral-900/90 dark:via-neutral-900 dark:to-amber-950/20 p-6 shadow-xs">
+              <div className="border-b border-neutral-200 dark:border-white/10 pb-3 mb-5">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-base font-bold text-neutral-900 dark:text-white flex items-center gap-2">
+                    <span className="flex size-6 items-center justify-center rounded-md bg-amber-500/20 text-amber-800 dark:text-amber-400 text-xs font-bold">2</span>
+                    AI-SOC & Autonomous Alert Triage
+                  </h3>
+                  <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2.5 py-0.5 text-[10px] font-bold text-amber-800 dark:text-amber-400 border border-amber-500/20">
+                    <LuBot className="size-3 text-amber-600 dark:text-amber-400" />
+                    AI Acceleration
+                  </span>
+                </div>
+                <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
+                  Model alert volume, autonomous AI triage containment rates, and Tier-1 analyst labor recovery.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+                    Monthly Alert Volume
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={inputs.monthlyAlertVolume}
+                    onChange={(e) => handleInputChange("monthlyAlertVolume", e.target.value)}
+                    className="w-full rounded-lg border border-neutral-300 dark:border-white/15 bg-white dark:bg-neutral-800/70 px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
+                  />
+                  <p className="mt-1 text-[11px] text-neutral-400">Total raw security alerts per month.</p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+                    % Triaged Autonomously
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={inputs.autoTriagePct}
+                    onChange={(e) => handleInputChange("autoTriagePct", e.target.value)}
+                    className="w-full rounded-lg border border-neutral-300 dark:border-white/15 bg-white dark:bg-neutral-800/70 px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
+                  />
+                  <p className="mt-1 text-[11px] text-neutral-400">Triaged without human analyst fatigue.</p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+                    Analyst Hourly Cost ({getCurrencySymbol(currency)}/hr)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={inputs.analystHourlyCost}
+                    onChange={(e) => handleInputChange("analystHourlyCost", e.target.value)}
+                    className="w-full rounded-lg border border-neutral-300 dark:border-white/15 bg-white dark:bg-neutral-800/70 px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
+                  />
+                  <p className="mt-1 text-[11px] text-neutral-400">Fully loaded frontline analyst rate.</p>
+                </div>
+              </div>
+
+              {/* Dynamic Live AI Benefit Pill */}
+              <div className="mt-4 p-3 rounded-xl border border-amber-500/20 bg-amber-500/5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                <div className="flex items-center gap-2 text-neutral-700 dark:text-neutral-300">
+                  <LuSparkles className="size-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                  <span>
+                    Autonomously triaging <strong>{Math.round(results.monthlyTriagedAlerts).toLocaleString()}</strong> alerts/mo saves ~<strong>{Math.round(results.monthlyHoursSaved)} hrs/mo</strong> of manual toil.
+                  </span>
+                </div>
+                <div className="font-mono font-bold text-amber-700 dark:text-amber-300 shrink-0">
+                  + {formatMoney(results.aiAnnualSavings)}/yr in AI efficiency
+                </div>
+              </div>
+            </div>
+
+            {/* Section 3: SOC Investment – Tooling & Personnel */}
             <div className="rounded-2xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-900/90 p-6 shadow-xs">
               <div className="border-b border-neutral-200 dark:border-white/10 pb-3 mb-5">
                 <h3 className="text-base font-bold text-neutral-900 dark:text-white flex items-center gap-2">
-                  <span className="flex size-6 items-center justify-center rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-400 text-xs font-bold">2</span>
+                  <span className="flex size-6 items-center justify-center rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-400 text-xs font-bold">3</span>
                   SOC Investment – Tooling & Personnel
                 </h3>
                 <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
@@ -494,7 +716,7 @@ export default function SocCalculatorPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                    Initial Tooling Cost ($)
+                    Initial Tooling Cost ({getCurrencySymbol(currency)})
                   </label>
                   <input
                     type="number"
@@ -508,7 +730,7 @@ export default function SocCalculatorPage() {
 
                 <div>
                   <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                    Implementation Cost ($)
+                    Implementation Cost ({getCurrencySymbol(currency)})
                   </label>
                   <input
                     type="number"
@@ -522,7 +744,7 @@ export default function SocCalculatorPage() {
 
                 <div>
                   <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                    Annual Platform Cost ($/year)
+                    Annual Platform Cost ({getCurrencySymbol(currency)}/yr)
                   </label>
                   <input
                     type="number"
@@ -536,17 +758,16 @@ export default function SocCalculatorPage() {
 
                 <div>
                   <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                    Automation Rate (%)
+                    Compliance Savings ({getCurrencySymbol(currency)}/yr)
                   </label>
                   <input
                     type="number"
                     min="0"
-                    max="100"
-                    value={inputs.automationPct}
-                    onChange={(e) => handleInputChange("automationPct", e.target.value)}
+                    value={inputs.complianceSavings}
+                    onChange={(e) => handleInputChange("complianceSavings", e.target.value)}
                     className="w-full rounded-lg border border-neutral-300 dark:border-white/15 bg-neutral-50/50 dark:bg-neutral-800/50 px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
                   />
-                  <p className="mt-1 text-[11px] text-neutral-400">Alerts triaged automatically via SOAR.</p>
+                  <p className="mt-1 text-[11px] text-neutral-400">Reduced audit prep & penalties.</p>
                 </div>
 
                 <div>
@@ -565,7 +786,7 @@ export default function SocCalculatorPage() {
 
                 <div>
                   <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                    Analyst Salary ($/year)
+                    Analyst Salary ({getCurrencySymbol(currency)}/yr)
                   </label>
                   <input
                     type="number"
@@ -593,7 +814,7 @@ export default function SocCalculatorPage() {
 
                 <div>
                   <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                    Engineer Salary ($/year)
+                    Engineer Salary ({getCurrencySymbol(currency)}/yr)
                   </label>
                   <input
                     type="number"
@@ -604,70 +825,14 @@ export default function SocCalculatorPage() {
                   />
                   <p className="mt-1 text-[11px] text-neutral-400">Fully loaded compensation per engineer.</p>
                 </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                    SOC Managers (FTE)
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={inputs.managerCount}
-                    onChange={(e) => handleInputChange("managerCount", e.target.value)}
-                    className="w-full rounded-lg border border-neutral-300 dark:border-white/15 bg-neutral-50/50 dark:bg-neutral-800/50 px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
-                  />
-                  <p className="mt-1 text-[11px] text-neutral-400">SOC operations manager / director.</p>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                    Manager Salary ($/year)
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={inputs.managerSalary}
-                    onChange={(e) => handleInputChange("managerSalary", e.target.value)}
-                    className="w-full rounded-lg border border-neutral-300 dark:border-white/15 bg-neutral-50/50 dark:bg-neutral-800/50 px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
-                  />
-                  <p className="mt-1 text-[11px] text-neutral-400">Fully loaded compensation per manager.</p>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                    Annual Training Budget ($/yr)
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={inputs.trainingBudget}
-                    onChange={(e) => handleInputChange("trainingBudget", e.target.value)}
-                    className="w-full rounded-lg border border-neutral-300 dark:border-white/15 bg-neutral-50/50 dark:bg-neutral-800/50 px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
-                  />
-                  <p className="mt-1 text-[11px] text-neutral-400">Certifications, adversary simulation.</p>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                    Compliance Savings ($/yr)
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={inputs.complianceSavings}
-                    onChange={(e) => handleInputChange("complianceSavings", e.target.value)}
-                    className="w-full rounded-lg border border-neutral-300 dark:border-white/15 bg-neutral-50/50 dark:bg-neutral-800/50 px-3 py-2 text-sm text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500/40"
-                  />
-                  <p className="mt-1 text-[11px] text-neutral-400">Reduced audit prep & penalties.</p>
-                </div>
               </div>
             </div>
 
-            {/* Section 3: Expected Improvements with SOC */}
+            {/* Section 4: Expected Improvements with SOC */}
             <div className="rounded-2xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-900/90 p-6 shadow-xs">
               <div className="border-b border-neutral-200 dark:border-white/10 pb-3 mb-5">
                 <h3 className="text-base font-bold text-neutral-900 dark:text-white flex items-center gap-2">
-                  <span className="flex size-6 items-center justify-center rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-400 text-xs font-bold">3</span>
+                  <span className="flex size-6 items-center justify-center rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-400 text-xs font-bold">4</span>
                   Expected Improvements with SOC
                 </h3>
                 <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
@@ -738,7 +903,7 @@ export default function SocCalculatorPage() {
 
                 <div className="sm:col-span-2">
                   <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-                    Downtime Cost Per Hour ($/hour)
+                    Downtime Cost Per Hour ({getCurrencySymbol(currency)}/hour)
                   </label>
                   <input
                     type="number"
@@ -755,12 +920,12 @@ export default function SocCalculatorPage() {
 
           {/* RIGHT COLUMN: Live Dynamic Charts (Sticky on Desktop) */}
           <div className="lg:col-span-5 lg:sticky lg:top-24 space-y-6">
-            {/* 1. LINE CHART FIRST (Top): Cumulative Net Savings Trend */}
+            {/* 1. LINE CHART: Cumulative Net Savings Trend */}
             <div className="rounded-2xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-900/90 p-5 shadow-xs">
               <div className="flex items-center justify-between mb-1">
                 <h3 className="text-sm font-bold text-neutral-900 dark:text-white flex items-center gap-1.5">
                   <LuTrendingUp className="size-4 text-amber-600 dark:text-amber-400" />
-                  <span>Cumulative Net Savings</span>
+                  <span>Cumulative Net Savings ({currency})</span>
                 </h3>
                 <span className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold">
                   {results.paybackMonths ? `Break-even: ${results.paybackMonths} mo` : "N/A"}
@@ -815,7 +980,7 @@ export default function SocCalculatorPage() {
                                 textAnchor="middle"
                                 className="text-[10px] font-semibold fill-neutral-700 dark:fill-neutral-300"
                               >
-                                {formatCurrency(p.val)}
+                                {formatMoney(p.val, true)}
                               </text>
                             </g>
                           ))}
@@ -833,12 +998,12 @@ export default function SocCalculatorPage() {
               </div>
             </div>
 
-            {/* 2. BAR CHART SECOND (Below): Annual Cost vs. With SOC */}
+            {/* 2. BAR CHART: Annual Cost vs. With SOC */}
             <div className="rounded-2xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-900/90 p-5 shadow-xs">
               <div className="flex items-center justify-between mb-1">
                 <h3 className="text-sm font-bold text-neutral-900 dark:text-white flex items-center gap-1.5">
                   <LuLayers className="size-4 text-amber-600 dark:text-amber-400" />
-                  <span>Annual Cost vs. With SOC</span>
+                  <span>Annual Cost vs. With SOC ({currency})</span>
                 </h3>
                 <span className="text-xs text-neutral-500 dark:text-neutral-400">
                   5-Year View
@@ -863,7 +1028,7 @@ export default function SocCalculatorPage() {
                             style={{ height: `${lossHeight}%` }}
                           >
                             <div className="absolute -top-7 left-1/2 -translate-x-1/2 hidden group-hover:block bg-neutral-900 text-white text-[10px] px-1.5 py-0.5 rounded shadow pointer-events-none whitespace-nowrap z-10">
-                              {formatCurrency(results.lossData[idx])}
+                              {formatMoney(results.lossData[idx], true)}
                             </div>
                           </div>
 
@@ -873,7 +1038,7 @@ export default function SocCalculatorPage() {
                             style={{ height: `${socHeight}%` }}
                           >
                             <div className="absolute -top-7 left-1/2 -translate-x-1/2 hidden group-hover:block bg-neutral-900 text-white text-[10px] px-1.5 py-0.5 rounded shadow pointer-events-none whitespace-nowrap z-10">
-                              {formatCurrency(results.socCostData[idx])}
+                              {formatMoney(results.socCostData[idx], true)}
                             </div>
                           </div>
                         </div>
@@ -906,17 +1071,17 @@ export default function SocCalculatorPage() {
                   Live Economic Summary
                 </span>
                 <span className="font-mono text-emerald-600 dark:text-emerald-400">
-                  {formatCurrency(results.annualBenefits)}/yr net
+                  {formatMoney(results.annualBenefits)}/yr net
                 </span>
               </div>
               <p className="text-[11px] text-neutral-500 dark:text-neutral-400">
-                Adjust any baseline exposure or team configuration on the left to watch return projections adapt instantly.
+                Adjust baseline exposure, AI autonomous triage rates, or team configuration on the left to watch return projections adapt instantly.
               </p>
             </div>
           </div>
         </section>
 
-        {/* Detailed Financial Breakdown Table (Bottom Section Kept Intact) */}
+        {/* Detailed Financial Breakdown Table */}
         <section className="rounded-2xl border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-900/90 p-6 shadow-xs overflow-hidden">
           <div className="border-b border-neutral-200 dark:border-white/10 pb-4 mb-4">
             <h3 className="text-base font-bold text-neutral-900 dark:text-white">
@@ -932,7 +1097,7 @@ export default function SocCalculatorPage() {
               <thead>
                 <tr className="border-b border-neutral-200 dark:border-white/10 text-neutral-500 dark:text-neutral-400 font-semibold uppercase tracking-wider text-[11px]">
                   <th className="py-3 px-4">Financial Category</th>
-                  <th className="py-3 px-4 text-right">Annual Impact</th>
+                  <th className="py-3 px-4 text-right">Annual Impact ({currency})</th>
                   <th className="py-3 px-4 text-right">3-Year Cumulative</th>
                   <th className="py-3 px-4 text-right">5-Year Cumulative</th>
                 </tr>
@@ -940,45 +1105,51 @@ export default function SocCalculatorPage() {
               <tbody className="divide-y divide-neutral-100 dark:divide-white/5 text-neutral-700 dark:text-neutral-300">
                 <tr>
                   <td className="py-3 px-4 font-medium text-neutral-900 dark:text-white">Baseline Incident & Breach Loss (Without SOC)</td>
-                  <td className="py-3 px-4 text-right font-mono text-rose-600 dark:text-rose-400">{formatCurrency(results.annualLossBefore)}</td>
-                  <td className="py-3 px-4 text-right font-mono text-rose-600 dark:text-rose-400">{formatCurrency(results.annualLossBefore * 3)}</td>
-                  <td className="py-3 px-4 text-right font-mono text-rose-600 dark:text-rose-400">{formatCurrency(results.annualLossBefore * 5)}</td>
+                  <td className="py-3 px-4 text-right font-mono text-rose-600 dark:text-rose-400">{formatMoney(results.annualLossBefore)}</td>
+                  <td className="py-3 px-4 text-right font-mono text-rose-600 dark:text-rose-400">{formatMoney(results.annualLossBefore * 3)}</td>
+                  <td className="py-3 px-4 text-right font-mono text-rose-600 dark:text-rose-400">{formatMoney(results.annualLossBefore * 5)}</td>
+                </tr>
+                <tr>
+                  <td className="py-3 px-4 font-medium text-neutral-900 dark:text-white">AI Autonomous Triage & Labor Efficiency</td>
+                  <td className="py-3 px-4 text-right font-mono text-emerald-600 dark:text-emerald-400">+{formatMoney(results.aiAnnualSavings)}</td>
+                  <td className="py-3 px-4 text-right font-mono text-emerald-600 dark:text-emerald-400">+{formatMoney(results.aiAnnualSavings * 3)}</td>
+                  <td className="py-3 px-4 text-right font-mono text-emerald-600 dark:text-emerald-400">+{formatMoney(results.aiAnnualSavings * 5)}</td>
                 </tr>
                 <tr>
                   <td className="py-3 px-4 font-medium text-neutral-900 dark:text-white">SOC Personnel (Analysts + Engineers + Lead)</td>
-                  <td className="py-3 px-4 text-right font-mono">{formatCurrency(results.socPersonnel)}</td>
-                  <td className="py-3 px-4 text-right font-mono">{formatCurrency(results.socPersonnel * 3)}</td>
-                  <td className="py-3 px-4 text-right font-mono">{formatCurrency(results.socPersonnel * 5)}</td>
+                  <td className="py-3 px-4 text-right font-mono">{formatMoney(results.socPersonnel)}</td>
+                  <td className="py-3 px-4 text-right font-mono">{formatMoney(results.socPersonnel * 3)}</td>
+                  <td className="py-3 px-4 text-right font-mono">{formatMoney(results.socPersonnel * 5)}</td>
                 </tr>
                 <tr>
                   <td className="py-3 px-4 font-medium text-neutral-900 dark:text-white">Platform Subscriptions & Maintenance</td>
-                  <td className="py-3 px-4 text-right font-mono">{formatCurrency(inputs.annualPlatform)}</td>
-                  <td className="py-3 px-4 text-right font-mono">{formatCurrency(inputs.annualPlatform * 3)}</td>
-                  <td className="py-3 px-4 text-right font-mono">{formatCurrency(inputs.annualPlatform * 5)}</td>
+                  <td className="py-3 px-4 text-right font-mono">{formatMoney(inputs.annualPlatform)}</td>
+                  <td className="py-3 px-4 text-right font-mono">{formatMoney(inputs.annualPlatform * 3)}</td>
+                  <td className="py-3 px-4 text-right font-mono">{formatMoney(inputs.annualPlatform * 5)}</td>
                 </tr>
                 <tr>
                   <td className="py-3 px-4 font-medium text-neutral-900 dark:text-white">Ongoing Training & Upskilling</td>
-                  <td className="py-3 px-4 text-right font-mono">{formatCurrency(inputs.trainingBudget)}</td>
-                  <td className="py-3 px-4 text-right font-mono">{formatCurrency(inputs.trainingBudget * 3)}</td>
-                  <td className="py-3 px-4 text-right font-mono">{formatCurrency(inputs.trainingBudget * 5)}</td>
+                  <td className="py-3 px-4 text-right font-mono">{formatMoney(inputs.trainingBudget)}</td>
+                  <td className="py-3 px-4 text-right font-mono">{formatMoney(inputs.trainingBudget * 3)}</td>
+                  <td className="py-3 px-4 text-right font-mono">{formatMoney(inputs.trainingBudget * 5)}</td>
                 </tr>
                 <tr className="bg-neutral-50/60 dark:bg-white/[0.02] font-semibold text-neutral-900 dark:text-white">
                   <td className="py-3 px-4">Total Operating Cost (Opex)</td>
-                  <td className="py-3 px-4 text-right font-mono">{formatCurrency(results.socOperatingAnnual)}</td>
-                  <td className="py-3 px-4 text-right font-mono">{formatCurrency(results.socOperatingAnnual * 3)}</td>
-                  <td className="py-3 px-4 text-right font-mono">{formatCurrency(results.socOperatingAnnual * 5)}</td>
+                  <td className="py-3 px-4 text-right font-mono">{formatMoney(results.socOperatingAnnual)}</td>
+                  <td className="py-3 px-4 text-right font-mono">{formatMoney(results.socOperatingAnnual * 3)}</td>
+                  <td className="py-3 px-4 text-right font-mono">{formatMoney(results.socOperatingAnnual * 5)}</td>
                 </tr>
                 <tr>
                   <td className="py-3 px-4 font-medium text-neutral-900 dark:text-white">Upfront Capital & Implementation (One-time)</td>
-                  <td className="py-3 px-4 text-right font-mono">{formatCurrency(results.initialInvestment)}</td>
-                  <td className="py-3 px-4 text-right font-mono">{formatCurrency(results.initialInvestment)}</td>
-                  <td className="py-3 px-4 text-right font-mono">{formatCurrency(results.initialInvestment)}</td>
+                  <td className="py-3 px-4 text-right font-mono">{formatMoney(results.initialInvestment)}</td>
+                  <td className="py-3 px-4 text-right font-mono">{formatMoney(results.initialInvestment)}</td>
+                  <td className="py-3 px-4 text-right font-mono">{formatMoney(results.initialInvestment)}</td>
                 </tr>
                 <tr className="border-t border-neutral-200 dark:border-white/10 bg-amber-500/5 dark:bg-amber-500/10 font-bold text-amber-900 dark:text-amber-300">
                   <td className="py-3 px-4">Net Economic Value / Benefit</td>
-                  <td className="py-3 px-4 text-right font-mono">{formatCurrency(results.annualBenefits)}</td>
-                  <td className="py-3 px-4 text-right font-mono">{formatCurrency(results.net3y)}</td>
-                  <td className="py-3 px-4 text-right font-mono">{formatCurrency(results.net5y)}</td>
+                  <td className="py-3 px-4 text-right font-mono">{formatMoney(results.annualBenefits)}</td>
+                  <td className="py-3 px-4 text-right font-mono">{formatMoney(results.net3y)}</td>
+                  <td className="py-3 px-4 text-right font-mono">{formatMoney(results.net5y)}</td>
                 </tr>
               </tbody>
             </table>
@@ -990,5 +1161,19 @@ export default function SocCalculatorPage() {
         <Footer />
       </div>
     </div>
+  );
+}
+
+export default function SocCalculatorPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-neutral-50 dark:bg-neutral-950 text-neutral-600 dark:text-neutral-400">
+          Loading SOC ROI Calculator...
+        </div>
+      }
+    >
+      <SocCalculatorContent />
+    </Suspense>
   );
 }

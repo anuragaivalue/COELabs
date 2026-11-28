@@ -3,279 +3,301 @@ generator client {
 }
 
 datasource db {
-  provider = "mysql"
-  url      = env("DATABASE_URL")
+  provider = "sqlite"
+  url      = "file:./dev.db"
 }
+
+// ==========================================
+// CORE iVALUE COE INFRASTRUCTURE MODELS
+// ==========================================
+
+model ContactInquiry {
+  id           String   @id @default(cuid())
+  fullName     String
+  workEmail    String
+  company      String
+  title        String?
+  interestArea String?
+  message      String
+  status       String   @default("pending")
+  createdAt    DateTime @default(now())
+
+  @@index([workEmail])
+  @@index([status])
+}
+
+model PartnerApplication {
+  id          String             @id @default(cuid())
+  companyName String
+  partnerTier String             @default("standard")
+  contactName String
+  workEmail   String
+  phone       String?
+  region      String?
+  status      String             @default("pending")
+  createdAt   DateTime           @default(now())
+  handshakes  PartnerHandshake[]
+
+  @@index([workEmail])
+  @@index([status])
+}
+
+model PartnerHandshake {
+  id           String              @id @default(cuid())
+  partnerId    String
+  handshakeKey String              @unique
+  verifiedAt   DateTime?
+  createdAt    DateTime            @default(now())
+  partner      PartnerApplication? @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+
+  @@index([partnerId])
+}
+
+// ==========================================
+// APPLICATION & CONTENT PLATFORM MODELS
+// ==========================================
 
 model userlist {
   id             Int    @id @default(autoincrement())
-  email          String @db.VarChar(255)
-  name           String @db.VarChar(255)
-  userType       String @db.VarChar(255)
-  provider       String @default("google") @db.VarChar(50)
-  profileImage   String @db.VarChar(255)
-  accessToken    String @db.VarChar(500)
-  accessTillDate String @db.VarChar(255)
+  email          String
+  name           String
+  userType       String
+  provider       String @default("google")
+  profileImage   String
+  accessToken    String
+  accessTillDate String
 
   @@map("userlist")
 }
 
 model approvedrequest {
   id                       Int    @id @default(autoincrement())
-  requesteduserlistEmail   String @db.VarChar(255)
-  contentID                String @db.VarChar(255)
-  contentIdKey             String @db.VarChar(255)
-  orchestrationID          String @db.VarChar(500)
-  orchestrationVMGroupName String @db.VarChar(500)
+  requesteduserlistEmail   String
+  contentID                String
+  contentIdKey             String
+  orchestrationID          String
+  orchestrationVMGroupName String
 }
 
 model category {
   id              Int    @id @default(autoincrement())
-  category        String @db.VarChar(255)
-  subCategory     String @db.VarChar(255)
-  subCategoryFull String @db.VarChar(255)
+  category        String
+  subCategory     String
+  subCategoryFull String
 }
 
 model cdnvideos {
   id               Int      @id @default(autoincrement())
-  contentID        String   @db.VarChar(11)
-  contentIdKey     String   @db.VarChar(255)
-  cdnUrl           String   @db.VarChar(500)
-  createdAt        DateTime @default(now()) @db.Timestamp(0)
-  videoName        String   @db.VarChar(500)
-  videoDescription String   @db.VarChar(500)
+  contentID        String
+  contentIdKey     String
+  cdnUrl           String
+  createdAt        DateTime @default(now())
+  videoName        String
+  videoDescription String
 }
 
 model cloudconsoleuser {
   id                Int       @id @default(autoincrement())
-  email             String    @unique(map: "email") @db.VarChar(255)
-  otp               String?   @db.VarChar(10)
-  is_verified       String?   @default("0") @db.VarChar(1)
-  password_hash     String?   @db.VarChar(255)
-  card_holder_name  String?   @db.VarChar(255)
-  card_last_four    String?   @db.Char(4)
-  card_expiry_month String?   @db.Char(2)
-  card_expiry_year  String?   @db.Char(4)
-  payment_status    String    @db.VarChar(50)
-  first_name        String?   @db.VarChar(100)
-  last_name         String?   @db.VarChar(100)
-  phone             String?   @db.VarChar(20)
-  organization_name String?   @db.VarChar(255)
-  created_at        DateTime? @default(now()) @db.Timestamp(0)
-  updated_at        DateTime? @default(now()) @db.Timestamp(0)
+  email             String    @unique(map: "email")
+  otp               String?
+  is_verified       String?   @default("0")
+  password_hash     String?
+  card_holder_name  String?
+  card_last_four    String?
+  card_expiry_month String?
+  card_expiry_year  String?
+  payment_status    String
+  first_name        String?
+  last_name         String?
+  phone             String?
+  organization_name String?
+  created_at        DateTime? @default(now())
+  updated_at        DateTime? @default(now())
 }
 
 model content {
-  id                Int                   @id @default(autoincrement())
-  idKey             String                @db.VarChar(255)
-  oem               String                @db.VarChar(255)
-  oemImage          String                @db.VarChar(500)
-  head              String                @db.VarChar(500)
-  headDetails       String                @db.VarChar(1000)
-  overView          String                @db.VarChar(50000)
-  howToAccess       String                @db.VarChar(500)
-  supportContent    String                @db.VarChar(5000)
-  accessSteps       String?               @db.LongText
-  accessCredentials String?               @db.LongText
-  comingSoon        content_comingSoon    @default(No)
-  contentStatus     content_contentStatus @default(draft)
+  id                Int     @id @default(autoincrement())
+  idKey             String
+  oem               String
+  oemImage          String
+  head              String
+  headDetails       String
+  overView          String
+  howToAccess       String
+  supportContent    String
+  accessSteps       String?
+  accessCredentials String?
+  comingSoon        String  @default("No")
+  contentStatus     String  @default("draft")
 }
 
 model contentcategory {
   id           Int    @id @default(autoincrement())
-  contentID    String @db.VarChar(255)
-  contentIdKey String @db.VarChar(500)
-  category     String @db.VarChar(500)
-  subCategory  String @db.VarChar(500)
+  contentID    String
+  contentIdKey String
+  category     String
+  subCategory  String
 }
 
 model contentplaybooks {
   id           Int      @id @default(autoincrement())
-  contentID    String   @db.VarChar(255)
-  contentIdKey String   @db.VarChar(500)
-  fileName     String   @db.VarChar(500)
-  createdAt    DateTime @default(now()) @db.Timestamp(0)
+  contentID    String
+  contentIdKey String
+  fileName     String
+  createdAt    DateTime @default(now())
 }
 
 model contentresources {
   id           Int    @id @default(autoincrement())
-  contentID    String @db.VarChar(255)
-  contentIdKey String @db.VarChar(255)
-  fileName     String @db.VarChar(500)
+  contentID    String
+  contentIdKey String
+  fileName     String
 }
 
 model deletedrequesteduser {
   id               Int       @id @default(autoincrement())
-  userName         String    @db.VarChar(255)
-  userEmail        String    @db.VarChar(255)
-  organizationName String    @db.VarChar(255)
-  countryName      String    @db.VarChar(225)
-  timezone         String    @db.VarChar(225)
-  comments         String    @db.VarChar(2000)
-  contentID        String    @db.VarChar(255)
-  contentIdKey     String    @db.VarChar(255)
-  requestedDate    String    @db.VarChar(255)
-  startDate        String    @db.VarChar(255)
-  endDate          String    @db.VarChar(255)
-  userAccessKeys   String    @db.VarChar(500)
-  otp              String    @db.VarChar(255)
-  otpTime          String    @db.VarChar(255)
-  status           String    @db.VarChar(255)
-  adminComment     String    @db.VarChar(5000)
-  deletedAt        DateTime? @db.DateTime(0)
-  deletedBy        String?   @db.VarChar(255)
+  userName         String
+  userEmail        String
+  organizationName String
+  countryName      String
+  timezone         String
+  comments         String
+  contentID        String
+  contentIdKey     String
+  requestedDate    String
+  startDate        String
+  endDate          String
+  userAccessKeys   String
+  otp              String
+  otpTime          String
+  status           String
+  adminComment     String
+  deletedAt        DateTime?
+  deletedBy        String?
 }
 
 model knowledge_documents {
-  id          Int                         @id @default(autoincrement())
-  file_name   String                      @db.VarChar(255)
-  object_name String                      @db.VarChar(500)
-  mime_type   String?                     @db.VarChar(150)
+  id          Int       @id @default(autoincrement())
+  file_name   String
+  object_name String
+  mime_type   String?
   file_size   BigInt
-  status      knowledge_documents_status? @default(Pending)
-  uploaded_by String                      @db.VarChar(255)
-  created_at  DateTime?                   @default(now()) @db.DateTime(0)
+  status      String?   @default("Pending")
+  uploaded_by String
+  created_at  DateTime? @default(now())
 }
 
 model oem {
   id      Int    @id @default(autoincrement())
-  oemName String @db.VarChar(255)
-  logo    String @db.VarChar(255)
+  oemName String
+  logo    String
 }
 
 model orchestration {
   id                       Int    @id @default(autoincrement())
-  contentID                String @db.VarChar(255)
-  contentIdKey             String @db.VarChar(255)
-  orchestration            String @db.VarChar(255)
-  orchestrationVMGroupName String @db.VarChar(500)
+  contentID                String
+  contentIdKey             String
+  orchestration            String
+  orchestrationVMGroupName String
 }
 
 model orchestrationvmgroup {
   id                       Int    @id @default(autoincrement())
-  orchestrationID          String @db.VarChar(255)
-  orchestrationVMGroupName String @db.VarChar(255)
-  vmID                     String @db.VarChar(500)
-  comments                 String @db.VarChar(5000)
+  orchestrationID          String
+  orchestrationVMGroupName String
+  vmID                     String
+  comments                 String
 }
 
 model product_access {
-  id           Int                         @id @default(autoincrement())
+  id           Int       @id @default(autoincrement())
   userId       Int
   contentId    Int
-  accessStatus product_access_accessStatus @default(active)
+  accessStatus String    @default("active")
   grantedBy    Int?
-  grantedDate  DateTime                    @default(now()) @db.DateTime(0)
-  expiryDate   DateTime?                   @db.Date
-  createdDate  DateTime                    @default(now()) @db.DateTime(0)
-  updatedDate  DateTime                    @default(now()) @db.DateTime(0)
+  grantedDate  DateTime  @default(now())
+  expiryDate   DateTime?
+  createdDate  DateTime  @default(now())
+  updatedDate  DateTime  @default(now())
 
-  @@unique([userId, contentId], map: "unique_user_content")
-  @@index([accessStatus], map: "idx_accessStatus")
-  @@index([contentId], map: "idx_contentId")
-  @@index([userId], map: "idx_userId")
+  @@unique([userId, contentId], map: "product_access_unique_user_content")
+  @@index([accessStatus], map: "product_access_idx_accessStatus")
+  @@index([contentId], map: "product_access_idx_contentId")
+  @@index([userId], map: "product_access_idx_userId")
 }
 
 model publicfile {
   id           Int    @id @default(autoincrement())
-  fileName     String @db.VarChar(500)
-  contentID    String @db.VarChar(255)
-  contentIdKey String @db.VarChar(255)
+  fileName     String
+  contentID    String
+  contentIdKey String
 }
 
 model requesteduserlist {
   id               Int    @id @default(autoincrement())
-  userName         String @db.VarChar(255)
-  userEmail        String @db.VarChar(255)
-  organizationName String @db.VarChar(255)
-  countryName      String @db.VarChar(225)
-  timezone         String @db.VarChar(225)
-  comments         String @db.VarChar(2000)
-  contentID        String @db.VarChar(255)
-  contentIdKey     String @db.VarChar(255)
-  requestedDate    String @db.VarChar(255)
-  startDate        String @db.VarChar(255)
-  endDate          String @db.VarChar(255)
-  userAccessKeys   String @db.VarChar(500)
-  otp              String @db.VarChar(255)
-  otpTime          String @db.VarChar(255)
-  status           String @db.VarChar(255)
-  adminComment     String @db.VarChar(5000)
+  userName         String
+  userEmail        String
+  organizationName String
+  countryName      String
+  timezone         String
+  comments         String
+  contentID        String
+  contentIdKey     String
+  requestedDate    String
+  startDate        String
+  endDate          String
+  userAccessKeys   String
+  otp              String
+  otpTime          String
+  status           String
+  adminComment     String
 }
 
 model rssfeeds {
   id    Int    @id @default(autoincrement())
-  oem   String @db.VarChar(255)
-  image String @db.VarChar(500)
-  head  String @db.VarChar(500)
-  url   String @db.VarChar(500)
+  oem   String
+  image String
+  head  String
+  url   String
 }
 
 model user_content_access {
-  id          Int                        @id @default(autoincrement())
+  id          Int      @id @default(autoincrement())
   userId      Int
   contentId   Int
-  idKey       String                     @db.VarChar(255)
-  status      user_content_access_status @default(active)
+  idKey       String
+  status      String   @default("active")
   grantedBy   Int
-  grantedDate DateTime                   @default(now()) @db.DateTime(0)
-  updatedDate DateTime                   @default(now()) @db.DateTime(0)
+  grantedDate DateTime @default(now())
+  updatedDate DateTime @default(now())
 
-  @@unique([userId, contentId], map: "unique_user_content")
-  @@index([contentId], map: "idx_contentId")
-  @@index([idKey], map: "idx_idKey")
-  @@index([status], map: "idx_status")
-  @@index([userId], map: "idx_userId")
+  @@unique([userId, contentId], map: "user_content_access_unique_user_content")
+  @@index([contentId], map: "user_content_access_idx_contentId")
+  @@index([idKey], map: "user_content_access_idx_idKey")
+  @@index([status], map: "user_content_access_idx_status")
+  @@index([userId], map: "user_content_access_idx_userId")
 }
 
 model visitorlogs {
   id             Int      @id @default(autoincrement())
-  contentId      String   @db.VarChar(255)
-  contentKey     String   @db.VarChar(255)
-  UserOS         String   @db.VarChar(255)
-  UserBrowser    String   @db.VarChar(255)
-  UserIP         String   @db.VarChar(255)
-  UserCity       String   @db.VarChar(255)
-  UserRegionName String   @db.VarChar(255)
-  UserCountry    String   @db.VarChar(255)
-  UserDevice     String   @db.VarChar(255)
-  time           DateTime @default(now()) @db.DateTime(0)
+  contentId      String
+  contentKey     String
+  UserOS         String
+  UserBrowser    String
+  UserIP         String
+  UserCity       String
+  UserRegionName String
+  UserCountry    String
+  UserDevice     String
+  time           DateTime @default(now())
 }
 
 model ytvideos {
   id           Int     @id @default(autoincrement())
-  contentID    String  @db.VarChar(255)
-  contentIdKey String  @db.VarChar(255)
-  ytCode       String  @db.VarChar(255)
-  ytType       String? @default("single") @db.VarChar(20)
-}
-
-enum product_access_accessStatus {
-  active
-  revoked
-}
-
-enum user_content_access_status {
-  active
-  revoked
-}
-
-enum knowledge_documents_status {
-  Pending
-  Processing
-  Completed
-  Failed
-}
-
-enum content_comingSoon {
-  Yes
-  No
-}
-
-enum content_contentStatus {
-  draft
-  private
-  published
+  contentID    String
+  contentIdKey String
+  ytCode       String
+  ytType       String? @default("single")
 }
 
 // ==========================================
@@ -287,7 +309,7 @@ model User {
   name          String?
   email         String?   @unique
   emailVerified DateTime? @map("email_verified")
-  image         String?   @db.Text
+  image         String?
   role          String?   @default("user")
   provider      String?   @default("google")
   createdAt     DateTime  @default(now()) @map("created_at")
@@ -300,18 +322,18 @@ model User {
 }
 
 model Account {
-  id                 String  @id @default(cuid())
-  userId             String  @map("user_id")
-  type               String
-  provider           String
-  providerAccountId  String  @map("provider_account_id")
-  refresh_token      String? @db.Text
-  access_token       String? @db.Text
-  expires_at         Int?
-  token_type         String?
-  scope              String?
-  id_token           String? @db.Text
-  session_state      String?
+  id                String  @id @default(cuid())
+  userId            String  @map("user_id")
+  type              String
+  provider          String
+  providerAccountId String  @map("provider_account_id")
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 

@@ -4,16 +4,16 @@ import React, { useState, useMemo } from "react";
 import Link from "next/link";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
-import { IValueEmblem } from "@/components/ui/ivalue-logo";
 import { OemImage } from "@/components/ui/oem-image";
 import { Card, CardTitle, CardDescription } from "@/components/ui/card";
 import { oemPartners } from "@/data/oems";
 import {
-  ExternalLink,
-  Search,
+  OemIntroSection,
+  OemClosingSection
+} from "@/components/oem/oem-intro-sections";
+import {
   ArrowRight,
-  ShieldCheck,
-  Building2
+  ShieldCheck
 } from "lucide-react";
 
 export default function OemDirectoryPage() {
@@ -62,21 +62,8 @@ export default function OemDirectoryPage() {
             <span className="text-neutral-900 dark:text-white font-semibold">OEM Directory</span>
           </div>
 
-          {/* Hero Header */}
-          <div className="mt-8 text-center max-w-3xl mx-auto">
-            <div className="inline-flex items-center gap-2 rounded-full border border-amber-500/25 bg-amber-500/10 px-3.5 py-1 text-xs font-semibold text-amber-700 dark:border-orange-400/25 dark:bg-orange-500/15 dark:text-orange-300">
-              <IValueEmblem className="size-3.5" />
-              <span>Certified Technology Ecosystem</span>
-            </div>
-
-            <h1 className="mt-4 font-sans text-3xl font-extrabold tracking-tight text-neutral-900 sm:text-5xl dark:text-white">
-              Leading Technology OEM Partners
-            </h1>
-
-            <p className="mt-3 font-sans text-sm sm:text-base text-neutral-600 dark:text-neutral-300 leading-relaxed">
-              Discover certified global OEMs powering the <span className="highlight">iValue Center of Excellence</span> solution stacks. Pre-integrated, multi-brand blueprints tested in live lab environments.
-            </p>
-          </div>
+          {/* Top Intro Section highlighting Value Proposition (Lab Interoperability, Joint GTM, Enterprise Blueprints) */}
+          <OemIntroSection />
 
           {/* Search & Category Filter Controls */}
           <div className="mt-12 rounded-2xl border border-neutral-200/90 bg-white/80 p-4 sm:p-6 shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-neutral-900/70">
@@ -131,13 +118,14 @@ export default function OemDirectoryPage() {
             {filteredOems.map((partner, idx) => (
               <Card
                 key={idx}
-                className="flex flex-col justify-between p-6 border border-neutral-200/90 bg-white/90 dark:border-white/10 dark:bg-neutral-900/80 hover:border-amber-500/40 hover:-translate-y-1 transition-all duration-200 shadow-sm hover:shadow-md"
+                className="flex flex-col justify-between p-6 border border-neutral-200/90 bg-white/90 dark:border-white/10 dark:bg-neutral-900/80 hover:border-amber-500/40 hover:-translate-y-1 transition-all duration-200 shadow-sm hover:shadow-md group"
               >
                 <div>
-                  {/* Clean white backdrop in dark mode for 100% logo visibility */}
+                  {/* High contrast backdrop supporting light and dark modes */}
                   <div className="flex h-16 w-full items-center justify-center p-2.5 rounded-xl bg-neutral-100/90 dark:bg-white/95 shadow-xs border border-neutral-200/60 dark:border-white/30 transition-all duration-300">
                     <OemImage
                       src={partner.logo}
+                      darkSrc={partner.logoDark}
                       alt={partner.name}
                       className="max-h-11 max-w-[130px] object-contain transition-transform duration-300 group-hover:scale-105"
                       placeholderClassName="w-full h-11"
@@ -145,7 +133,15 @@ export default function OemDirectoryPage() {
                   </div>
 
                   <div className="mt-4">
-                    <CardTitle className="text-base font-bold text-neutral-900 dark:text-white">
+                    {/* Certified Lab Verified Metadata Tag */}
+                    <div className="flex items-center justify-between">
+                      <span className="inline-flex items-center gap-1 rounded-md bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400 border border-emerald-500/20">
+                        <ShieldCheck className="size-3 text-emerald-600 dark:text-emerald-400" />
+                        <span>Certified Lab Verified</span>
+                      </span>
+                    </div>
+
+                    <CardTitle className="mt-2 text-base font-bold text-neutral-900 dark:text-white">
                       {partner.name}
                     </CardTitle>
                     <CardDescription className="mt-1 text-xs font-semibold text-amber-700 dark:text-orange-400 line-clamp-1">
@@ -157,16 +153,16 @@ export default function OemDirectoryPage() {
                   </div>
                 </div>
 
+                {/* Card Action Footer */}
                 <div className="mt-6 pt-4 border-t border-neutral-100 dark:border-white/5 flex items-center justify-between">
-                  <a
-                    href={partner.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-xs font-display font-semibold text-amber-700 dark:text-orange-400 hover:underline"
+                  {/* Rewired OEM Stack Specs link with Arrow icon */}
+                  <Link
+                    href={`/portal/marketplace?oem=${encodeURIComponent(partner.name)}#solutions-stack`}
+                    className="inline-flex items-center gap-1 text-xs font-display font-semibold text-amber-700 dark:text-orange-400 hover:underline group/link"
                   >
                     <span>OEM Stack Specs</span>
-                    <ExternalLink className="size-3" />
-                  </a>
+                    <ArrowRight className="size-3 transition-transform group-hover/link:translate-x-0.5" />
+                  </Link>
 
                   <Link
                     href={`/request-poc?source=oem_${encodeURIComponent(partner.name)}`}
@@ -179,6 +175,9 @@ export default function OemDirectoryPage() {
               </Card>
             ))}
           </div>
+
+          {/* Bottom Closing Section featuring "Build Once. Sell Everywhere. Scale with iValue CoE." immediately above Footer */}
+          <OemClosingSection />
         </div>
       </main>
 

@@ -1,29 +1,41 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect, Suspense } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
-import { IValueEmblem } from "@/components/ui/ivalue-logo";
 import { OemImage } from "@/components/ui/oem-image";
-import { Card, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { AnimatedCounter } from "@/components/ui/counter";
 import { solutionStacks } from "@/data/stacks";
 import { stackControlsData } from "@/data/stack-controls";
+import { MARKETPLACE_STACKS } from "@/data/marketplace-data";
+import { OemPartnersSection } from "@/components/marketplace/oem-partners-section";
 import {
   Layers,
   ArrowRight,
-  ShieldCheck,
   CheckCircle2,
-  ExternalLink,
-  SlidersHorizontal,
   Sparkles,
   ShoppingBag,
-  Laptop2
+  Laptop2,
+  FileText
 } from "lucide-react";
 
-export default function MarketplacePage() {
-  const [searchQuery, setSearchQuery] = useState("");
+function MarketplaceLoadingFallback() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-transparent">
+      <div className="flex flex-col items-center gap-3">
+        <div className="size-8 animate-spin rounded-full border-2 border-amber-600 border-t-transparent dark:border-orange-400" />
+        <p className="text-xs text-neutral-500 font-sans">Loading iValue Solution Marketplace...</p>
+      </div>
+    </div>
+  );
+}
+
+function MarketplaceContent() {
+  const searchParams = useSearchParams();
+  const [searchQuery, setSearchQuery] = useState(searchParams.get("oem") || "");
   const [selectedCategory, setSelectedCategory] = useState("All");
 
   const categories = [
@@ -34,26 +46,68 @@ export default function MarketplacePage() {
     "Endpoint & Mobile Security",
     "Application Security",
     "Verticals & BFSI",
-    "Compliance & Governance"
+    "Compliance & Governance",
+    "Exposure Management"
   ];
 
-  // Merge solutionStacks and stackControlsData
-  const marketplaceItems = useMemo(() => {
-    // Start with the curated stackControlsData
-    const curated = Object.values(stackControlsData).map((s) => ({
-      id: s.slug,
-      slug: s.slug,
-      title: s.title,
-      category: s.category,
-      tagline: s.tagline,
-      description: s.overview,
-      oems: s.oems,
-      controls: s.controls.map((c) => c.name),
-      multiplier: s.multiplier,
-      compliance: s.compliance.map((c) => c.name)
-    }));
+  // URL Query Param Listener & Auto-Filter
+  useEffect(() => {
+    const oemParam = searchParams.get("oem");
+    if (oemParam) {
+      const timer = setTimeout(() => {
+        setSearchQuery(oemParam);
+        const elem = document.getElementById("solutions-stack");
+        if (elem) {
+          elem.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [searchParams]);
 
-    // Add any from solutionStacks not already in curated
+  // Merge MARKETPLACE_STACKS, stackControlsData, and solutionStacks
+  const marketplaceItems = useMemo(() => {
+    const curated = [];
+
+    // 1. Add modern multi-OEM MARKETPLACE_STACKS
+    MARKETPLACE_STACKS.forEach((m) => {
+      curated.push({
+        id: m.id,
+        slug: m.slug,
+        title: m.title,
+        category: m.category,
+        tagline: m.tagline,
+        description: m.architectureDescription,
+        oems: m.oems,
+        controls: m.controlReferences,
+        multiplier: m.benchmarkMultiplier,
+        compliance: m.complianceFrameworks,
+        executiveSummary: m.executiveSummary
+      });
+    });
+
+    // 2. Add curated stackControlsData
+    Object.values(stackControlsData).forEach((s) => {
+      const exists = curated.some(
+        (c) => c.slug.toLowerCase() === s.slug.toLowerCase() || c.title.toLowerCase() === s.title.toLowerCase()
+      );
+      if (!exists) {
+        curated.push({
+          id: s.slug,
+          slug: s.slug,
+          title: s.title,
+          category: s.category,
+          tagline: s.tagline,
+          description: s.overview,
+          oems: s.oems,
+          controls: s.controls.map((c) => c.name),
+          multiplier: s.multiplier,
+          compliance: s.compliance.map((c) => c.name)
+        });
+      }
+    });
+
+    // 3. Add any from legacy solutionStacks not already in curated
     solutionStacks.forEach((stack) => {
       const exists = curated.some(
         (c) =>
@@ -87,12 +141,14 @@ export default function MarketplacePage() {
 
   const filteredItems = useMemo(() => {
     return marketplaceItems.filter((item) => {
+      const q = searchQuery.toLowerCase().trim();
       const matchesSearch =
-        searchQuery === "" ||
-        item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.oems.some((o) => o.name.toLowerCase().includes(searchQuery.toLowerCase()));
+        q === "" ||
+        item.title.toLowerCase().includes(q) ||
+        (item.description && item.description.toLowerCase().includes(q)) ||
+        (item.tagline && item.tagline.toLowerCase().includes(q)) ||
+        item.category.toLowerCase().includes(q) ||
+        item.oems.some((o) => o.name.toLowerCase().includes(q));
 
       const matchesCategory =
         selectedCategory === "All" ||
@@ -109,8 +165,29 @@ export default function MarketplacePage() {
 
       <main className="flex-1 py-10 md:py-16">
         <div className="mx-auto max-w-7xl px-6 sm:px-10">
+          {/* Breadcrumb */}
+          <div className="flex items-center justify-between text-xs font-medium text-neutral-500 dark:text-neutral-400">
+            <div className="flex items-center gap-2">
+              <Link href="/" className="hover:text-amber-600 dark:hover:text-orange-400 transition-colors">
+                Home
+              </Link>
+              <span>/</span>
+              <span className="text-neutral-900 dark:text-white font-semibold">Marketplace</span>
+            </div>
+
+            {/* Quick Link to Overview page */}
+            <Link
+              href="/portal/overview"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-200 bg-white/80 px-3 py-1.5 text-xs font-semibold text-neutral-800 hover:bg-neutral-100 hover:text-amber-700 dark:border-white/10 dark:bg-neutral-800/80 dark:text-neutral-200 dark:hover:bg-neutral-800 dark:hover:text-orange-400 transition-all shadow-2xs"
+            >
+              <FileText className="size-3.5 text-amber-600 dark:text-orange-400" />
+              <span>Executive Stacks Overview</span>
+              <ArrowRight className="size-3" />
+            </Link>
+          </div>
+
           {/* Hero Header */}
-          <div className="text-center max-w-3xl mx-auto">
+          <div className="mt-8 text-center max-w-3xl mx-auto">
             <div className="inline-flex items-center gap-2 rounded-full border border-amber-500/25 bg-amber-500/10 px-3.5 py-1 text-xs font-semibold text-amber-700 dark:border-orange-400/25 dark:bg-orange-500/15 dark:text-orange-300">
               <ShoppingBag className="size-3.5 text-amber-600 dark:text-orange-400" />
               <span>iValue Solution Marketplace</span>
@@ -124,15 +201,15 @@ export default function MarketplacePage() {
               Discover, evaluate, and test certified multistack blueprints engineered with leading global OEMs. Map your technology architecture directly to <span className="highlight">CERT-In, RBI, SEBI CSCRF, and DPDP</span> regulatory compliance frameworks.
             </p>
 
-            {/* Quick Stats Bar with 1s Count-Up */}
+            {/* Quick Stats Bar with Count-Up */}
             <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
               <div className="rounded-xl border border-neutral-200/80 bg-white/70 p-3.5 text-center shadow-2xs dark:border-white/10 dark:bg-neutral-900/60">
-                <AnimatedCounter value="34+" duration={1000} className="font-display text-xl sm:text-2xl font-bold text-neutral-900 dark:text-white" />
+                <AnimatedCounter value="38+" duration={1000} className="font-display text-xl sm:text-2xl font-bold text-neutral-900 dark:text-white" />
                 <div className="text-[11px] text-neutral-500 dark:text-neutral-400 font-sans">Solution Stacks</div>
               </div>
               <div className="rounded-xl border border-neutral-200/80 bg-white/70 p-3.5 text-center shadow-2xs dark:border-white/10 dark:bg-neutral-900/60">
-                <AnimatedCounter value="15+" duration={1000} className="font-display text-xl sm:text-2xl font-bold text-neutral-900 dark:text-white" />
-                <div className="text-[11px] text-neutral-500 dark:text-neutral-400 font-sans">Top Global OEMs</div>
+                <AnimatedCounter value="25+" duration={1000} className="font-display text-xl sm:text-2xl font-bold text-neutral-900 dark:text-white" />
+                <div className="text-[11px] text-neutral-500 dark:text-neutral-400 font-sans">Global OEMs</div>
               </div>
               <div className="rounded-xl border border-neutral-200/80 bg-white/70 p-3.5 text-center shadow-2xs dark:border-white/10 dark:bg-neutral-900/60">
                 <AnimatedCounter value="100+" duration={1000} className="font-display text-xl sm:text-2xl font-bold text-neutral-900 dark:text-white" />
@@ -140,13 +217,19 @@ export default function MarketplacePage() {
               </div>
               <div className="rounded-xl border border-neutral-200/80 bg-white/70 p-3.5 text-center shadow-2xs dark:border-white/10 dark:bg-neutral-900/60">
                 <AnimatedCounter value="5+" duration={1000} className="font-display text-xl sm:text-2xl font-bold text-neutral-900 dark:text-white" />
-                <div className="text-[11px] text-neutral-500 dark:text-neutral-400 font-sans">Regulatory Mappings</div>
+                <div className="text-[11px] text-neutral-500 dark:text-neutral-400 font-sans">Compliance Frameworks</div>
               </div>
             </div>
           </div>
 
-          {/* Search & Filter Controls */}
-          <div className="mt-12 rounded-2xl border border-neutral-200/90 bg-white/80 p-4 sm:p-6 shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-neutral-900/70">
+          {/* OEM Partners Section (Audited Solutions Library with 62 Partner Cards) */}
+          <OemPartnersSection />
+
+          {/* Search & Filter Controls with #solutions-stack anchor target */}
+          <div
+            id="solutions-stack"
+            className="scroll-mt-24 mt-12 rounded-2xl border border-neutral-200/90 bg-white/80 p-4 sm:p-6 shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-neutral-900/70"
+          >
             {/* Search Input with Google Material Symbol */}
             <div className="relative">
               <span className="material-symbols-outlined absolute top-1/2 left-3.5 -translate-y-1/2 text-neutral-400 dark:text-neutral-500 select-none pointer-events-none">
@@ -156,13 +239,21 @@ export default function MarketplacePage() {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search solutions by stack name, OEM partner (e.g. Check Point, CyberArk, Google Cloud), or keyword..."
-                className="w-full rounded-xl border border-neutral-200 bg-white/90 py-3.5 pr-10 pl-11 text-xs sm:text-sm font-sans text-neutral-900 placeholder:text-neutral-400 focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20 dark:border-white/15 dark:bg-neutral-800/80 dark:text-white dark:placeholder:text-neutral-500 transition-all"
+                placeholder="Search solutions by stack name, OEM partner (e.g. Datadog, EDB, Check Point, CyberArk, Virtuozzo), or keyword..."
+                className="w-full rounded-xl border border-neutral-200 bg-white/90 py-3.5 pr-14 pl-11 text-xs sm:text-sm font-sans text-neutral-900 placeholder:text-neutral-400 focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20 dark:border-white/15 dark:bg-neutral-800/80 dark:text-white dark:placeholder:text-neutral-500 transition-all"
               />
               {searchQuery && (
                 <button
-                  onClick={() => setSearchQuery("")}
-                  className="absolute top-1/2 right-3.5 -translate-y-1/2 text-xs font-semibold text-neutral-400 hover:text-neutral-700 dark:hover:text-white"
+                  onClick={() => {
+                    setSearchQuery("");
+                    if (typeof window !== "undefined") {
+                      const url = new URL(window.location.href);
+                      url.searchParams.delete("oem");
+                      window.history.replaceState({}, "", url.pathname + url.hash);
+                    }
+                  }}
+                  className="absolute top-1/2 right-3.5 -translate-y-1/2 text-xs font-semibold text-neutral-400 hover:text-neutral-700 dark:hover:text-white cursor-pointer px-2 py-1 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+                  title="Clear search filter"
                 >
                   Clear
                 </button>
@@ -187,15 +278,34 @@ export default function MarketplacePage() {
             </div>
           </div>
 
-          {/* Results Summary */}
-          <div className="mt-6 flex items-center justify-between text-xs text-neutral-500 dark:text-neutral-400">
-            <span>
+          {/* Results Summary & Active Filters */}
+          <div className="mt-6 flex flex-wrap items-center justify-between gap-2 text-xs text-neutral-500 dark:text-neutral-400">
+            <div>
               Showing <strong className="text-neutral-900 dark:text-white">{filteredItems.length}</strong> certified solution stacks
-            </span>
+              {selectedCategory !== "All" && (
+                <span> in <strong className="text-amber-700 dark:text-orange-400">{selectedCategory}</strong></span>
+              )}
+            </div>
             {searchQuery && (
-              <span>
-                Filtered by: &ldquo;{searchQuery}&rdquo;
-              </span>
+              <div className="flex items-center gap-1.5">
+                <span>Filtered by OEM / Keyword:</span>
+                <span className="inline-flex items-center gap-1 rounded-md bg-amber-500/10 px-2 py-0.5 font-bold text-amber-700 dark:bg-orange-500/15 dark:text-orange-300 border border-amber-500/20">
+                  &ldquo;{searchQuery}&rdquo;
+                  <button
+                    onClick={() => {
+                      setSearchQuery("");
+                      if (typeof window !== "undefined") {
+                        const url = new URL(window.location.href);
+                        url.searchParams.delete("oem");
+                        window.history.replaceState({}, "", url.pathname + url.hash);
+                      }
+                    }}
+                    className="ml-1 text-[10px] hover:text-amber-900 dark:hover:text-white"
+                  >
+                    ×
+                  </button>
+                </span>
+              </div>
             )}
           </div>
 
@@ -204,7 +314,7 @@ export default function MarketplacePage() {
             {filteredItems.map((item, idx) => (
               <Card
                 key={idx}
-                className="flex flex-col justify-between p-6 border border-neutral-200/90 bg-white/90 dark:border-white/10 dark:bg-neutral-900/80 hover:border-amber-500/40 hover:-translate-y-1 transition-all duration-200 shadow-sm hover:shadow-md"
+                className="flex flex-col justify-between p-6 border border-neutral-200/90 bg-white/90 dark:border-white/10 dark:bg-neutral-900/80 hover:border-amber-500/40 hover:-translate-y-1 transition-all duration-200 shadow-sm hover:shadow-md group"
               >
                 <div>
                   {/* Category Badge & Live Lab Indicator */}
@@ -226,7 +336,7 @@ export default function MarketplacePage() {
                     {item.tagline || item.description}
                   </p>
 
-                  {/* OEM Logos Row with crisp white container in dark mode */}
+                  {/* OEM Logos Row with crisp backdrop */}
                   <div className="mt-4 pt-3 border-t border-neutral-100 dark:border-white/5">
                     <div className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 dark:text-neutral-500 mb-2">
                       Integrated OEM Partners ({item.oems.length})
@@ -240,6 +350,7 @@ export default function MarketplacePage() {
                         >
                           <OemImage
                             src={oem.logo}
+                            darkSrc={oem.logoDark}
                             alt={oem.name}
                             className="h-5 max-w-[70px] object-contain"
                             placeholderClassName="h-5 px-1 py-0 text-[9px]"
@@ -259,9 +370,17 @@ export default function MarketplacePage() {
                               {item.oems.slice(4).map((remOem, rIdx) => (
                                 <div key={rIdx} className="flex items-center gap-1.5 p-1 rounded bg-neutral-50 dark:bg-neutral-800">
                                   <div className="size-6 shrink-0 bg-white rounded p-0.5 shadow-2xs flex items-center justify-center">
-                                    <OemImage src={remOem.logo} alt={remOem.name} className="max-h-4 max-w-[20px] object-contain" placeholderClassName="text-[7px]" />
+                                    <OemImage
+                                      src={remOem.logo}
+                                      darkSrc={remOem.logoDark}
+                                      alt={remOem.name}
+                                      className="max-h-4 max-w-[20px] object-contain"
+                                      placeholderClassName="text-[7px]"
+                                    />
                                   </div>
-                                  <span className="text-[10px] font-semibold text-neutral-800 dark:text-neutral-200 truncate">{remOem.name}</span>
+                                  <span className="text-[10px] font-semibold text-neutral-800 dark:text-neutral-200 truncate">
+                                    {remOem.name}
+                                  </span>
                                 </div>
                               ))}
                             </div>
@@ -288,11 +407,11 @@ export default function MarketplacePage() {
                 <div className="mt-6 pt-4 border-t border-neutral-100 dark:border-white/5 flex flex-col gap-2">
                   <div className="flex items-center gap-2">
                     <Link
-                      href={`/stack/${item.slug}`}
+                      href={`/portal/overview?stack=${encodeURIComponent(item.slug)}`}
                       className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg border border-neutral-300/80 bg-white py-2 text-xs font-semibold text-neutral-800 hover:border-amber-500/50 hover:bg-neutral-50 dark:border-white/15 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700/80 transition-all text-center"
                     >
-                      <span>View Blueprint</span>
-                      <ArrowRight className="size-3" />
+                      <Layers className="size-3 text-amber-600 dark:text-orange-400" />
+                      <span>Stack Overview</span>
                     </Link>
 
                     <Link
@@ -339,5 +458,13 @@ export default function MarketplacePage() {
 
       <Footer />
     </div>
+  );
+}
+
+export default function MarketplacePage() {
+  return (
+    <Suspense fallback={<MarketplaceLoadingFallback />}>
+      <MarketplaceContent />
+    </Suspense>
   );
 }

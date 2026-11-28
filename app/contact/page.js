@@ -5,33 +5,107 @@ import Link from "next/link";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
 import { IValueEmblem } from "@/components/ui/ivalue-logo";
-import { Card, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import {
   MapPin,
   Mail,
   Phone,
   Send,
   CheckCircle2,
-  ArrowRight,
-  ShieldCheck,
-  Building2,
+  AlertCircle,
+  RotateCcw,
   Globe
 } from "lucide-react";
 
+const INTEREST_AREAS = [
+  "Executive Architecture Briefing",
+  "Live Lab Blueprint Validation",
+  "Enterprise RFP Scoping",
+  "Zero Trust & SASE Architecture",
+  "Cloud SecOps & SIEM Telemetry",
+  "Enterprise Database & HCI Resiliency",
+  "Channel Partner Enablement",
+  "OEM Onboarding & Certification"
+];
+
 export default function ContactPage() {
   const [formData, setFormData] = useState({
-    name: "",
-    email: "",
+    fullName: "",
+    workEmail: "",
     company: "",
-    subject: "Executive Architecture Briefing",
-    message: ""
+    title: "",
+    interestArea: INTEREST_AREAS[0],
+    message: "",
+    privacyConsent: false
   });
-  const [submitted, setSubmitted] = useState(false);
 
-  const handleSubmit = (e) => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errors, setErrors] = useState({});
+  const [submitError, setSubmitError] = useState("");
+  const [successTicket, setSuccessTicket] = useState(null);
+
+  const handleChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : value
+    }));
+
+    if (errors[name]) {
+      setErrors((prev) => {
+        const next = { ...prev };
+        delete next[name];
+        return next;
+      });
+    }
+  };
+
+  const handleReset = () => {
+    setFormData({
+      fullName: "",
+      workEmail: "",
+      company: "",
+      title: "",
+      interestArea: INTEREST_AREAS[0],
+      message: "",
+      privacyConsent: false
+    });
+    setErrors({});
+    setSubmitError("");
+    setSuccessTicket(null);
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (formData.name && formData.email) {
-      setSubmitted(true);
+    setIsSubmitting(true);
+    setSubmitError("");
+    setErrors({});
+
+    try {
+      const response = await fetch("/api/contact", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(formData)
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        if (data.errors) {
+          setErrors(data.errors);
+        }
+        setSubmitError(data.message || "Failed to submit inquiry. Please review the highlighted fields.");
+        return;
+      }
+
+      setSuccessTicket(data.id);
+    } catch (err) {
+      console.error("Contact inquiry submission error:", err);
+      setSubmitError("Network connection error. Please verify your connection and try again.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -98,7 +172,7 @@ export default function ContactPage() {
                       Singapore Regional Office
                     </h3>
                     <p className="mt-1 text-xs text-neutral-600 dark:text-neutral-400 font-sans leading-relaxed">
-                      No.31, Cantonment Road, Singapore - 089747
+                      No. 31, Cantonment Road, Singapore - 089747
                     </p>
                   </div>
                 </div>
@@ -135,7 +209,7 @@ export default function ContactPage() {
                 </Card>
               </div>
 
-              {/* Embedded Google Map mirroring MAIN site */}
+              {/* Embedded Google Map */}
               <Card className="overflow-hidden p-0 border border-neutral-200/90 bg-white/90 dark:border-white/10 dark:bg-neutral-900/80 shadow-sm">
                 <div className="p-4 border-b border-neutral-100 dark:border-white/5">
                   <h4 className="font-display text-xs font-bold text-neutral-900 dark:text-white">
@@ -160,23 +234,24 @@ export default function ContactPage() {
             {/* Right Column: Executive Briefing & Architecture Inquiry Form */}
             <div className="lg:col-span-7">
               <Card className="p-6 sm:p-10 border border-neutral-200/90 bg-white/90 dark:border-white/10 dark:bg-neutral-900/90 backdrop-blur-md shadow-lg">
-                {submitted ? (
-                  <div className="flex flex-col items-center justify-center py-16 text-center animate-in fade-in zoom-in-95 duration-500">
+                {successTicket ? (
+                  <div className="flex flex-col items-center justify-center py-16 text-center animate-in fade-in zoom-in-95 duration-400">
                     <div className="flex size-16 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400">
                       <CheckCircle2 className="size-9" />
                     </div>
                     <span className="mt-4 font-display text-xs font-bold uppercase tracking-widest text-emerald-600 dark:text-emerald-400">
-                      Message Received • Ticket #IV-MSG-{Math.floor(1000 + Math.random() * 9000)}
+                      Message Received • Ticket #{successTicket.slice(-8).toUpperCase()}
                     </span>
                     <h3 className="mt-2 font-sans text-2xl font-bold text-neutral-900 dark:text-white">
                       Thank You for Reaching Out
                     </h3>
                     <p className="mt-3 max-w-md text-xs sm:text-sm text-neutral-600 dark:text-neutral-400 font-sans leading-relaxed">
-                      Thank you, <strong>{formData.name}</strong>. An iValue solutions architect will review your message and reach out to <strong>{formData.email}</strong> within 1 business day.
+                      Thank you, <strong>{formData.fullName}</strong>. An iValue solutions architect will review your message for <strong>{formData.company}</strong> and reach out to <strong>{formData.workEmail}</strong> within 1 business day.
                     </p>
 
                     <button
-                      onClick={() => setSubmitted(false)}
+                      type="button"
+                      onClick={handleReset}
                       className="mt-8 rounded-lg bg-neutral-900 px-6 py-2.5 text-xs font-semibold text-white hover:bg-black dark:bg-white dark:text-black dark:hover:bg-neutral-200 transition-colors cursor-pointer"
                     >
                       Send Another Message
@@ -193,89 +268,200 @@ export default function ContactPage() {
                       </p>
                     </div>
 
+                    {submitError && (
+                      <div className="flex items-start gap-2.5 rounded-xl border border-red-500/30 bg-red-50/70 p-3.5 text-xs text-red-700 dark:border-red-500/20 dark:bg-red-950/30 dark:text-red-400">
+                        <AlertCircle className="size-4 shrink-0 mt-0.5" />
+                        <span>{submitError}</span>
+                      </div>
+                    )}
+
                     <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                      {/* Full Name */}
                       <div>
                         <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300">
                           Your Name *
                         </label>
                         <input
                           type="text"
-                          required
-                          value={formData.name}
-                          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                          placeholder="John Doe"
-                          className="mt-2 w-full rounded-lg border border-neutral-300 bg-white px-3.5 py-2.5 text-xs font-sans text-neutral-900 focus:border-amber-500 focus:outline-none dark:border-white/10 dark:bg-neutral-800 dark:text-white"
+                          name="fullName"
+                          value={formData.fullName}
+                          onChange={handleChange}
+                          placeholder="e.g. Vikram Chandra"
+                          className={`mt-2 w-full rounded-lg border bg-white px-3.5 py-2.5 text-xs font-sans text-neutral-900 focus:outline-none dark:bg-neutral-800 dark:text-white ${
+                            errors.fullName
+                              ? "border-red-500 focus:border-red-500"
+                              : "border-neutral-300 focus:border-amber-500 dark:border-white/10"
+                          }`}
                         />
+                        {errors.fullName && (
+                          <p className="mt-1 text-[11px] text-red-600 dark:text-red-400">{errors.fullName[0]}</p>
+                        )}
                       </div>
 
+                      {/* Work Email */}
                       <div>
                         <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300">
                           Work Email *
                         </label>
                         <input
                           type="email"
-                          required
-                          value={formData.email}
-                          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                          placeholder="john@enterprise.com"
-                          className="mt-2 w-full rounded-lg border border-neutral-300 bg-white px-3.5 py-2.5 text-xs font-sans text-neutral-900 focus:border-amber-500 focus:outline-none dark:border-white/10 dark:bg-neutral-800 dark:text-white"
+                          name="workEmail"
+                          value={formData.workEmail}
+                          onChange={handleChange}
+                          placeholder="e.g. vikram.c@enterprise.com"
+                          className={`mt-2 w-full rounded-lg border bg-white px-3.5 py-2.5 text-xs font-sans text-neutral-900 focus:outline-none dark:bg-neutral-800 dark:text-white ${
+                            errors.workEmail
+                              ? "border-red-500 focus:border-red-500"
+                              : "border-neutral-300 focus:border-amber-500 dark:border-white/10"
+                          }`}
                         />
+                        {errors.workEmail ? (
+                          <p className="mt-1 text-[11px] text-red-600 dark:text-red-400">{errors.workEmail[0]}</p>
+                        ) : (
+                          <span className="block mt-1 text-[10px] text-neutral-400">
+                            Corporate domains only (generic public emails are rejected).
+                          </span>
+                        )}
                       </div>
                     </div>
 
                     <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                      {/* Company Name */}
                       <div>
                         <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300">
                           Company / Organization *
                         </label>
                         <input
                           type="text"
-                          required
+                          name="company"
                           value={formData.company}
-                          onChange={(e) => setFormData({ ...formData, company: e.target.value })}
+                          onChange={handleChange}
                           placeholder="Acme Enterprise"
+                          className={`mt-2 w-full rounded-lg border bg-white px-3.5 py-2.5 text-xs font-sans text-neutral-900 focus:outline-none dark:bg-neutral-800 dark:text-white ${
+                            errors.company
+                              ? "border-red-500 focus:border-red-500"
+                              : "border-neutral-300 focus:border-amber-500 dark:border-white/10"
+                          }`}
+                        />
+                        {errors.company && (
+                          <p className="mt-1 text-[11px] text-red-600 dark:text-red-400">{errors.company[0]}</p>
+                        )}
+                      </div>
+
+                      {/* Job Title */}
+                      <div>
+                        <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300">
+                          Job Title
+                        </label>
+                        <input
+                          type="text"
+                          name="title"
+                          value={formData.title}
+                          onChange={handleChange}
+                          placeholder="e.g. Chief Information Security Officer"
                           className="mt-2 w-full rounded-lg border border-neutral-300 bg-white px-3.5 py-2.5 text-xs font-sans text-neutral-900 focus:border-amber-500 focus:outline-none dark:border-white/10 dark:bg-neutral-800 dark:text-white"
                         />
                       </div>
-
-                      <div>
-                        <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300">
-                          Inquiry Subject
-                        </label>
-                        <select
-                          value={formData.subject}
-                          onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
-                          className="mt-2 w-full rounded-lg border border-neutral-300 bg-white px-3.5 py-2.5 text-xs font-sans text-neutral-900 focus:border-amber-500 focus:outline-none dark:border-white/10 dark:bg-neutral-800 dark:text-white"
-                        >
-                          <option>Executive Architecture Briefing</option>
-                          <option>Live Lab Blueprint Validation</option>
-                          <option>Enterprise RFP Scoping</option>
-                          <option>Channel Partner Enablement</option>
-                          <option>OEM Onboarding & Certification</option>
-                        </select>
-                      </div>
                     </div>
 
+                    {/* Inquiry Subject */}
                     <div>
                       <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300">
-                        Inquiry Details or Enterprise Use Case
+                        Inquiry Subject / Area of Interest
                       </label>
-                      <textarea
-                        rows={5}
-                        value={formData.message}
-                        onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                        placeholder="Describe your current tech stack, evaluation timeline, compliance framework (e.g., RBI, SEBI CSCRF, CERT-In), or specific objectives..."
-                        className="mt-2 w-full rounded-lg border border-neutral-300 bg-white p-3 text-xs font-sans text-neutral-900 focus:border-amber-500 focus:outline-none dark:border-white/10 dark:bg-neutral-800 dark:text-white"
-                      />
+                      <select
+                        name="interestArea"
+                        value={formData.interestArea}
+                        onChange={handleChange}
+                        className="mt-2 w-full rounded-lg border border-neutral-300 bg-white px-3.5 py-2.5 text-xs font-sans text-neutral-900 focus:border-amber-500 focus:outline-none dark:border-white/10 dark:bg-neutral-800 dark:text-white"
+                      >
+                        {INTEREST_AREAS.map((subj, idx) => (
+                          <option key={idx} value={subj}>
+                            {subj}
+                          </option>
+                        ))}
+                      </select>
                     </div>
 
-                    <button
-                      type="submit"
-                      className="inline-flex items-center gap-2 rounded-xl bg-neutral-900 px-6 py-3 text-xs font-bold text-white hover:bg-black dark:bg-white dark:text-black dark:hover:bg-neutral-100 shadow-md transition-all cursor-pointer"
-                    >
-                      <Send className="size-3.5" />
-                      <span>Submit Architecture Inquiry</span>
-                    </button>
+                    {/* Message */}
+                    <div>
+                      <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300">
+                        Inquiry Details or Enterprise Use Case *
+                      </label>
+                      <textarea
+                        rows={4}
+                        name="message"
+                        value={formData.message}
+                        onChange={handleChange}
+                        placeholder="Describe your current tech stack, evaluation timeline, compliance framework (e.g., RBI, SEBI CSCRF, CERT-In), or specific objectives..."
+                        className={`mt-2 w-full rounded-lg border bg-white p-3 text-xs font-sans text-neutral-900 focus:outline-none dark:bg-neutral-800 dark:text-white resize-y ${
+                          errors.message
+                            ? "border-red-500 focus:border-red-500"
+                            : "border-neutral-300 focus:border-amber-500 dark:border-white/10"
+                        }`}
+                      />
+                      {errors.message && (
+                        <p className="mt-1 text-[11px] text-red-600 dark:text-red-400">{errors.message[0]}</p>
+                      )}
+                    </div>
+
+                    {/* Privacy Policy Consent Checkbox */}
+                    <div className="pt-1">
+                      <label className="flex items-start gap-3 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          name="privacyConsent"
+                          checked={formData.privacyConsent}
+                          onChange={handleChange}
+                          className="mt-0.5 size-4 rounded border-neutral-300 text-amber-600 focus:ring-amber-500 dark:border-white/20 dark:bg-neutral-800 dark:checked:bg-amber-600"
+                        />
+                        <span className="text-xs text-neutral-600 dark:text-neutral-400 leading-relaxed font-sans">
+                          I agree to the{" "}
+                          <Link
+                            href="/privacy-policy"
+                            target="_blank"
+                            className="font-semibold text-amber-700 hover:text-amber-800 dark:text-orange-400 dark:hover:text-orange-300 underline"
+                          >
+                            Privacy Policy
+                          </Link>{" "}
+                          and consent to iValue Center of Excellence processing my inquiry under DPDP Act 2023.
+                        </span>
+                      </label>
+                      {errors.privacyConsent && (
+                        <p className="mt-1 text-[11px] text-red-600 dark:text-red-400">{errors.privacyConsent[0]}</p>
+                      )}
+                    </div>
+
+                    {/* Action Buttons Row */}
+                    <div className="flex flex-col sm:flex-row items-center gap-3 pt-3 border-t border-neutral-100 dark:border-white/5">
+                      <button
+                        type="submit"
+                        disabled={isSubmitting}
+                        className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-neutral-900 px-6 py-3 text-xs font-bold text-white hover:bg-black dark:bg-white dark:text-black dark:hover:bg-neutral-100 shadow-md transition-all disabled:opacity-50 cursor-pointer"
+                      >
+                        {isSubmitting ? (
+                          <>
+                            <div className="size-3.5 animate-spin rounded-full border-2 border-white dark:border-black border-t-transparent" />
+                            <span>Submitting Inquiry...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Send className="size-3.5" />
+                            <span>Submit Architecture Inquiry</span>
+                          </>
+                        )}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleReset}
+                        disabled={isSubmitting}
+                        className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 rounded-xl border border-neutral-200 bg-white px-5 py-3 text-xs font-semibold text-neutral-700 hover:bg-neutral-50 dark:border-white/10 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700 transition-all cursor-pointer"
+                      >
+                        <RotateCcw className="size-3.5 text-neutral-400" />
+                        <span>Reset</span>
+                      </button>
+                    </div>
                   </form>
                 )}
               </Card>
